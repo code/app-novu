@@ -5,7 +5,7 @@ import { getHotkeyHandler } from '@mantine/hooks';
 import { TextAlignEnum } from '@novu/shared';
 import { colors } from '@novu/design-system';
 
-import { useEnvController } from '../../../../hooks';
+import { useEnvironment } from '../../../../hooks';
 import { useStepFormPath } from '../../hooks/useStepFormPath';
 import type { IForm } from '../formTypes';
 import { AutoSuggestionsDropdown } from './AutoSuggestionsDropdown';
@@ -17,7 +17,7 @@ export function TextRowContent({ blockIndex }: { blockIndex: number }) {
 
   const content = methods.watch(`${stepFormPath}.template.content.${blockIndex}.content`);
   const textAlign = methods.watch(`${stepFormPath}.template.content.${blockIndex}.styles.textAlign`);
-  const { readonly } = useEnvController();
+  const { readonly } = useEnvironment();
   const ref = useRef<HTMLDivElement>(null);
   const [text, setText] = useState<string>(content);
   const [visiblePlaceholder, setVisiblePlaceholder] = useState(!!content);
@@ -73,7 +73,7 @@ export function TextRowContent({ blockIndex }: { blockIndex: number }) {
     if (anchorPos > 1) {
       const endContent = data.slice(anchorPos - 2);
 
-      const contentToUse = endContent ? endContent : data;
+      const contentToUse = endContent || data;
       const slicePositions = contentToUse.lastIndexOf('{') + 1;
 
       const currentChar = contentToUse.charAt(slicePositions - 1);
@@ -303,10 +303,10 @@ function diffStrings(a: string, b: string) {
   while (pointer1 < a.length && pointer2 < b.length) {
     if (a[pointer1] !== b[pointer2]) {
       diff += b[pointer2];
-      pointer2++;
+      pointer2 += 1;
     } else {
-      pointer1++;
-      pointer2++;
+      pointer1 += 1;
+      pointer2 += 1;
     }
   }
 

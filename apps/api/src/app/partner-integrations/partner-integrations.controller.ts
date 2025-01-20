@@ -1,19 +1,18 @@
 import { ApiExcludeController, ApiTags } from '@nestjs/swagger';
 import {
-  Controller,
-  Post,
-  Param,
-  UseInterceptors,
-  UseGuards,
-  ClassSerializerInterceptor,
   Body,
+  ClassSerializerInterceptor,
+  Controller,
   Get,
+  Param,
+  Post,
   Put,
   Query,
+  UseInterceptors,
+  Headers,
 } from '@nestjs/common';
-import { IJwtPayload } from '@novu/shared';
-
-import { UserAuthGuard } from '../auth/framework/user.auth.guard';
+import { UserSessionData } from '@novu/shared';
+import { ModuleRef } from '@nestjs/core';
 import { UserSession } from '../shared/framework/user.decorator';
 import { CompleteAndUpdateVercelIntegrationRequestDto } from './dtos/complete-and-update-vercel-integration-request.dto';
 import { SetVercelConfigurationRequestDto } from './dtos/setup-vercel-integration-request.dto';
@@ -28,10 +27,12 @@ import { SetVercelConfigurationCommand } from './usecases/set-vercel-configurati
 import { SetVercelConfiguration } from './usecases/set-vercel-configuration/set-vercel-configuration.usecase';
 import { UpdateVercelConfigurationCommand } from './usecases/update-vercel-configuration/update-vercel-configuration.command';
 import { UpdateVercelConfiguration } from './usecases/update-vercel-configuration/update-vercel-configuration.usecase';
+import { UserAuthentication } from '../shared/framework/swagger/api.key.security';
+import { ProcessVercelWebhook } from './usecases/process-vercel-webhook/process-vercel-webhook.usecase';
+import { ProcessVercelWebhookCommand } from './usecases/process-vercel-webhook/process-vercel-webhook.command';
 
 @Controller('/partner-integrations')
 @UseInterceptors(ClassSerializerInterceptor)
-@UseGuards(UserAuthGuard)
 @ApiTags('Partner Integrations')
 @ApiExcludeController()
 export class PartnerIntegrationsController {
@@ -40,12 +41,15 @@ export class PartnerIntegrationsController {
     private getVercelProjectsUsecase: GetVercelProjects,
     private completeVercelIntegrationUsecase: CompleteVercelIntegration,
     private getVercelConfigurationUsecase: GetVercelConfiguration,
-    private updateVercelConfigurationUsecase: UpdateVercelConfiguration
+    private updateVercelConfigurationUsecase: UpdateVercelConfiguration,
+    private processVercelWebhookUsecase: ProcessVercelWebhook,
+    protected moduleRef: ModuleRef
   ) {}
 
   @Post('/vercel')
+  @UserAuthentication()
   async setupVercelIntegration(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Body() body: SetVercelConfigurationRequestDto
   ): Promise<SetupVercelConfigurationResponseDto> {
     return await this.setVercelConfigurationUsecase.execute(
@@ -59,15 +63,30 @@ export class PartnerIntegrationsController {
     );
   }
 
+  @Post('/vercel/webhook')
+  async webhook(@Body() body: any, @Headers('x-vercel-signature') signatureHeader: string) {
+    return this.processVercelWebhookUsecase.execute(
+      ProcessVercelWebhookCommand.create({
+        body,
+        teamId: body.payload.team.id,
+        projectId: body.payload.project.id,
+        deploymentUrl: body.payload.deployment.url,
+        vercelEnvironment: body.payload.target || 'preview',
+        signatureHeader,
+      })
+    );
+  }
+
   @Get('/vercel/projects/:configurationId')
+  @UserAuthentication()
   async getVercelProjects(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('configurationId') configurationId: string,
     @Query('nextPage') nextPage?: string
   ) {
     return await this.getVercelProjectsUsecase.execute(
       GetVercelProjectsCommand.create({
-        configurationId: configurationId,
+        configurationId,
         environmentId: user.environmentId,
         organizationId: user.organizationId,
         userId: user._id,
@@ -77,8 +96,9 @@ export class PartnerIntegrationsController {
   }
 
   @Post('/vercel/configuration/complete')
+  @UserAuthentication()
   async completeVercelIntegration(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Body() body: CompleteAndUpdateVercelIntegrationRequestDto
   ) {
     return await this.completeVercelIntegrationUsecase.execute(
@@ -93,14 +113,15 @@ export class PartnerIntegrationsController {
   }
 
   @Get('vercel/configuration/:configurationId')
+  @UserAuthentication()
   async getVercelConfigurationDetails(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('configurationId') configurationId: string
   ) {
     return await this.getVercelConfigurationUsecase.execute(
       GetVercelConfigurationCommand.create({
         userId: user._id,
-        configurationId: configurationId,
+        configurationId,
         environmentId: user.environmentId,
         organizationId: user.organizationId,
       })
@@ -108,8 +129,9 @@ export class PartnerIntegrationsController {
   }
 
   @Put('/vercel/configuration/update')
+  @UserAuthentication()
   async updateVercelConfiguration(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Body() body: CompleteAndUpdateVercelIntegrationRequestDto
   ) {
     return await this.updateVercelConfigurationUsecase.execute(

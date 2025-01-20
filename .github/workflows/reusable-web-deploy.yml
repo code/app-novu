@@ -1,5 +1,8 @@
 name: Deploy Web to Netlify
 
+env:
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
 # Controls when the action will run. Triggers the workflow on push or pull request
 on:
   workflow_call:
@@ -8,7 +11,7 @@ on:
         required: true
         type: string
       react_app_api_url:
-        required: true
+        required: false
         type: string
       react_app_ws_url:
         required: true
@@ -44,7 +47,15 @@ on:
       netlify_site_id:
         required: true
         type: string
-
+      clerk_publishable_key:
+        required: true
+        type: string
+      clerk_is_ee_auth_enabled:
+        required: true
+        type: string
+      new_dashboard_url:
+        required: false
+        type: string
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -58,7 +69,7 @@ jobs:
       deployments: write
       id-token: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         name: Checkout with submodules
         with:
           submodules: true
@@ -86,7 +97,12 @@ jobs:
           echo REACT_APP_LAUNCH_DARKLY_CLIENT_SIDE_ID=${{ secrets.LAUNCH_DARKLY_CLIENT_SIDE_ID }} >> .env
           echo REACT_APP_HUBSPOT_EMBED=${{ inputs.react_app_hubspot_embed }} >> .env
           echo REACT_APP_STRIPE_CLIENT_KEY=${{ secrets.STRIPE_CLIENT_KEY }} >> .env
-
+          echo REACT_APP_NOVU_GTM_ID=${{ secrets.REACT_APP_NOVU_GTM_ID }} >> .env
+          echo REACT_APP_MIXPANEL_KEY=${{ secrets.MIXPANEL_TOKEN }} >> .env
+          echo REACT_APP_CLERK_PUBLISHABLE_KEY=${{ inputs.clerk_publishable_key }} >> .env
+          echo REACT_APP_IS_EE_AUTH_ENABLED=${{ inputs.clerk_is_ee_auth_enabled }} >> .env
+          echo REACT_APP_NEW_DASHBOARD_URL=${{ inputs.new_dashboard_url }} >> .env
+          echo REACT_APP_PLAIN_SUPPORT_CHAT_APP_ID=${{secrets.REACT_APP_PLAIN_SUPPORT_CHAT_APP_ID}} >> .env
       - name: Envsetup
         working-directory: apps/web
         run: npm run envsetup

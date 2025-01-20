@@ -1,4 +1,4 @@
-import * as Handlebars from 'handlebars';
+import Handlebars from 'handlebars';
 import {
   IAttachmentOptions,
   ITriggerPayload,
@@ -9,7 +9,7 @@ Handlebars.registerHelper(
   function helper(this: typeof Handlebars, arg1, arg2, options) {
     // eslint-disable-next-line eqeqeq
     return arg1 == arg2 ? options.fn(this) : options.inverse(this);
-  }
+  },
 );
 
 type ContentEnginePayload = {

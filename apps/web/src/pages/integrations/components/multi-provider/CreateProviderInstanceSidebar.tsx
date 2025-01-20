@@ -18,7 +18,7 @@ import {
   inputStyles,
 } from '@novu/design-system';
 
-import { useFetchEnvironments } from '../../../../hooks/useFetchEnvironments';
+import { useEnvironment } from '../../../../hooks';
 import { useSegment } from '../../../../components/providers/SegmentProvider';
 import { createIntegration } from '../../../../api/integration';
 import { defaultIntegrationConditionsProps, IntegrationsStoreModalAnalytics } from '../../constants';
@@ -54,9 +54,9 @@ export function CreateProviderInstanceSidebar({
   onIntegrationCreated: (id: string) => void;
 }) {
   const { colorScheme } = useMantineTheme();
-  const { environments, isLoading: areEnvironmentsLoading } = useFetchEnvironments();
+  const { environments, isLoaded } = useEnvironment();
   const { isLoading: areIntegrationsLoading, providers: integrations } = useProviders();
-  const isLoading = areEnvironmentsLoading || areIntegrationsLoading;
+  const isLoading = !isLoaded || areIntegrationsLoading;
   const queryClient = useQueryClient();
   const segment = useSegment();
   const [conditionsFormOpened, { close: closeConditionsForm, open: openConditionsForm }] = useDisclosure(false);
@@ -118,7 +118,7 @@ export function CreateProviderInstanceSidebar({
         channel: selectedChannel,
         name: data.name,
         credentials: {},
-        active: provider.channel === ChannelTypeEnum.IN_APP ? true : false,
+        active: true,
         check: false,
         conditions,
         _environmentId: environmentId,
@@ -130,7 +130,7 @@ export function CreateProviderInstanceSidebar({
         name: data.name,
         environmentId,
       });
-      successMessage('Instance configuration is created');
+      successMessage('Integration was created');
       onIntegrationCreated(integrationId ?? '');
 
       queryClient.refetchQueries({
@@ -251,7 +251,7 @@ export function CreateProviderInstanceSidebar({
             <Radio.Group
               styles={inputStyles}
               sx={{
-                ['.mantine-Group-root']: {
+                '.mantine-Group-root': {
                   paddingTop: 0,
                   paddingLeft: '10px',
                 },

@@ -10,8 +10,10 @@ import {
   CacheService,
   InvalidateCacheService,
 } from '@novu/application-generic';
+import { Novu } from '@novu/api';
+import { initNovuClassSdk } from '../../shared/helpers/e2e/sdk/e2e-sdk.helper';
 
-describe('Count - GET /widget/notifications/count', function () {
+describe('Count - GET /widget/notifications/count #novu-v1', function () {
   const messageRepository = new MessageRepository();
   let session: UserSession;
   let template: NotificationTemplateEntity;
@@ -23,7 +25,7 @@ describe('Count - GET /widget/notifications/count', function () {
 
   let invalidateCache: InvalidateCacheService;
   let cacheInMemoryProviderService: CacheInMemoryProviderService;
-
+  let novuClient: Novu;
   before(async () => {
     cacheInMemoryProviderService = new CacheInMemoryProviderService();
     const cacheService = new CacheService(cacheInMemoryProviderService);
@@ -34,6 +36,7 @@ describe('Count - GET /widget/notifications/count', function () {
   beforeEach(async () => {
     session = new UserSession();
     await session.initialize();
+    novuClient = initNovuClassSdk(session);
 
     subscriberId = SubscriberRepository.createObjectId();
 
@@ -59,9 +62,9 @@ describe('Count - GET /widget/notifications/count', function () {
   });
 
   it('should return unseen count', async function () {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
 
     await session.awaitRunningJobs(template._id);
 
@@ -70,15 +73,14 @@ describe('Count - GET /widget/notifications/count', function () {
       String(subscriberProfile?._id),
       ChannelTypeEnum.IN_APP
     );
-    const messageId = messages[0]._id;
     const seenCount = (await getFeedCount()).data.count;
     expect(seenCount).to.equal(3);
   });
 
   it('should return unseen count after on message was seen', async function () {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
 
     await session.awaitRunningJobs(template._id);
 
@@ -106,9 +108,9 @@ describe('Count - GET /widget/notifications/count', function () {
   });
 
   it('should return unseen count after on message was read', async function () {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
 
     await session.awaitRunningJobs(template._id);
 
@@ -139,9 +141,9 @@ describe('Count - GET /widget/notifications/count', function () {
   });
 
   it('should return unseen count by limit', async function () {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
 
     await session.awaitRunningJobs(template._id);
 
@@ -178,7 +180,7 @@ describe('Count - GET /widget/notifications/count', function () {
   });
 
   it('should return unseen count by default limit 100', async function () {
-    for (let i = 0; i < 102; i++) {
+    for (let i = 0; i < 102; i += 1) {
       await messageRepository.create({
         _notificationId: MessageRepository.createObjectId(),
         _environmentId: session.environment._id,
@@ -202,8 +204,8 @@ describe('Count - GET /widget/notifications/count', function () {
   });
 
   it('should return default on string non numeric(NaN) value', async function () {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
 
     await session.awaitRunningJobs(template._id);
 
@@ -212,8 +214,8 @@ describe('Count - GET /widget/notifications/count', function () {
   });
 
   it('should return parse numeric string to number', async function () {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
 
     await session.awaitRunningJobs(template._id);
 
@@ -247,9 +249,9 @@ describe('Count - GET /widget/notifications/count', function () {
   });
 
   it('should return unseen count with a seen filter', async function () {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
 
     await session.awaitRunningJobs(template._id);
 
@@ -276,9 +278,9 @@ describe('Count - GET /widget/notifications/count', function () {
   });
 
   it('should return unread count with a read filter', async function () {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
 
     await session.awaitRunningJobs(template._id);
     if (!subscriberProfile) throw new Error('Subscriber profile is null');
@@ -310,9 +312,9 @@ describe('Count - GET /widget/notifications/count', function () {
   });
 
   it('should return unseen count after mark as request', async function () {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
 
     await session.awaitRunningJobs(template._id);
 
@@ -328,14 +330,14 @@ describe('Count - GET /widget/notifications/count', function () {
 
     await invalidateCache.invalidateQuery({
       key: buildFeedKey().invalidate({
-        subscriberId: subscriberId,
+        subscriberId,
         _environmentId: session.environment._id,
       }),
     });
 
     await invalidateCache.invalidateQuery({
       key: buildMessageCountKey().invalidate({
-        subscriberId: subscriberId,
+        subscriberId,
         _environmentId: session.environment._id,
       }),
     });
@@ -371,14 +373,14 @@ describe('Count - GET /widget/notifications/count', function () {
 async function invalidateSeenFeed(invalidateCache: InvalidateCacheService, subscriberId: string, session) {
   await invalidateCache.invalidateQuery({
     key: buildFeedKey().invalidate({
-      subscriberId: subscriberId,
+      subscriberId,
       _environmentId: session.environment._id,
     }),
   });
 
   await invalidateCache.invalidateQuery({
     key: buildMessageCountKey().invalidate({
-      subscriberId: subscriberId,
+      subscriberId,
       _environmentId: session.environment._id,
     }),
   });

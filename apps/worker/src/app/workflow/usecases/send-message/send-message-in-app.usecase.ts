@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import * as Sentry from '@sentry/node';
+import { Injectable, Logger } from '@nestjs/common';
+import { addBreadcrumb } from '@sentry/node';
 import { ModuleRef } from '@nestjs/core';
 
 import { MessageRepository, NotificationStepEntity, SubscriberRepository, MessageEntity } from '@novu/dal';
@@ -9,6 +9,7 @@ import {
   ExecutionDetailsStatusEnum,
   ActorTypeEnum,
   WebSocketEventEnum,
+  inAppMessageFromBridgeOutputs,
 } from '@novu/shared';
 import {
   InstrumentUsecase,
@@ -25,8 +26,8 @@ import {
   ExecutionLogRoute,
   ExecutionLogRouteCommand,
 } from '@novu/application-generic';
+import { InAppOutput } from '@novu/framework/internal';
 
-import { CreateLog } from '../../../shared/logs';
 import { SendMessageCommand } from './send-message.command';
 import { SendMessageBase } from './send-message.base';
 import { PlatformException } from '../../../shared/utils';
@@ -39,7 +40,6 @@ export class SendMessageInApp extends SendMessageBase {
     private invalidateCache: InvalidateCacheService,
     protected messageRepository: MessageRepository,
     private webSocketsQueueService: WebSocketsQueueService,
-    protected createLogUsecase: CreateLog,
     protected executionLogRoute: ExecutionLogRoute,
     protected subscriberRepository: SubscriberRepository,
     protected selectIntegration: SelectIntegration,
@@ -50,7 +50,6 @@ export class SendMessageInApp extends SendMessageBase {
   ) {
     super(
       messageRepository,
-      createLogUsecase,
       executionLogRoute,
       subscriberRepository,
       selectIntegration,
@@ -64,7 +63,7 @@ export class SendMessageInApp extends SendMessageBase {
   public async execute(command: SendMessageCommand) {
     if (!command.step.template) throw new PlatformException('Template not found');
 
-    Sentry.addBreadcrumb({
+    addBreadcrumb({
       message: 'Sending In App',
     });
 
@@ -93,13 +92,14 @@ export class SendMessageInApp extends SendMessageBase {
       return;
     }
 
-    const step: NotificationStepEntity = command.step;
+    const { step } = command;
     if (!step.template) throw new PlatformException('Template not found');
 
     let content = '';
 
     const { actor } = command.step.template;
 
+    const { subscriber } = command.compileContext;
     const template = await this.processVariants(command);
 
     if (template) {
@@ -107,7 +107,13 @@ export class SendMessageInApp extends SendMessageBase {
     }
 
     try {
-      if (!command.chimeraData) {
+      if (!command.bridgeData) {
+        const i18nInstance = await this.initiateTranslations(
+          command.environmentId,
+          command.organizationId,
+          subscriber.locale
+        );
+
         const compiled = await this.compileInAppTemplate.execute(
           CompileInAppTemplateCommand.create({
             organizationId: command.organizationId,
@@ -117,7 +123,7 @@ export class SendMessageInApp extends SendMessageBase {
             cta: step.template.cta,
             userId: command.userId,
           }),
-          this.initiateTranslations.bind(this)
+          i18nInstance
         );
         content = compiled.content;
 
@@ -135,20 +141,42 @@ export class SendMessageInApp extends SendMessageBase {
       return;
     }
 
-    const messagePayload = Object.assign({}, command.payload);
+    const messagePayload = { ...command.payload };
     delete messagePayload.attachments;
 
-    const oldMessage = await this.messageRepository.findOne({
-      _notificationId: command.notificationId,
-      _environmentId: command.environmentId,
-      _subscriberId: command._subscriberId,
-      _templateId: command._templateId,
-      _messageTemplateId: step.template._id,
-      channel: ChannelTypeEnum.IN_APP,
-      transactionId: command.transactionId,
-      providerId: integration.providerId,
-      _feedId: step.template._feedId,
-    });
+    let oldMessage: MessageEntity | null = null;
+    /*
+     * Only Stateful Workflows have a _templateId and _messageTemplateId, Stateless Workflows don't.
+     * MongoDB will NOT throw an error when query attributes are missing, it will simply ignore them.
+     * Therefore it's necessary to check for both before attempting to find the old message, otherwise
+     * we risk finding a message that shares the other attributes. This is true for Stateless Workflows
+     * that contain multiple in-app steps.
+     *
+     * Both _templateId and _messageTemplateId are actually required attributes of the MessageEntity,
+     * however the `messageRepository` typings are currently incorrect, allowing for any attribute
+     * to be passed in untyped.
+     *
+     * TODO: Fix the repository typings to allow for type-safe attribute access.
+     *
+     * TODO: After typing fixes, apply an approach that normalizes the _templateId and _messageTemplateId
+     * for Stateless and Stateful Workflows to the same attribute, so that we can use a single query to
+     * find the old message.
+     */
+    if (command._templateId && step.template._id) {
+      oldMessage = await this.messageRepository.findOne({
+        _notificationId: command.notificationId,
+        _environmentId: command.environmentId,
+        _organizationId: command.organizationId,
+        _subscriberId: command._subscriberId,
+        _templateId: command._templateId,
+        _messageTemplateId: step.template._id,
+        templateIdentifier: command.identifier,
+        transactionId: command.transactionId,
+        providerId: integration.providerId,
+        _feedId: step.template._feedId,
+        channel: ChannelTypeEnum.IN_APP,
+      });
+    }
 
     let message: MessageEntity | null = null;
 
@@ -166,30 +194,42 @@ export class SendMessageInApp extends SendMessageBase {
       }),
     });
 
-    const chimeraBody = command.chimeraData?.outputs.body;
+    // V2 data
+    const bridgeOutputs = command.bridgeData?.outputs as InAppOutput;
+    const inAppMessage = inAppMessageFromBridgeOutputs(bridgeOutputs);
+
+    const channelData: Partial<
+      Pick<MessageEntity, 'content' | 'subject' | 'avatar' | 'payload' | 'cta' | 'tags' | 'data'>
+    > = {
+      content: (this.storeContent() ? inAppMessage.content || content : null) as string,
+      cta: bridgeOutputs ? inAppMessage.cta : step.template.cta,
+      subject: inAppMessage.subject,
+      avatar: inAppMessage.avatar,
+      payload: messagePayload,
+      data: inAppMessage.data,
+      tags: command.tags,
+    };
 
     if (!oldMessage) {
       message = await this.messageRepository.create({
         _notificationId: command.notificationId,
-        _environmentId: command.environmentId,
         _organizationId: command.organizationId,
+        _environmentId: command.environmentId,
         _subscriberId: command._subscriberId,
         _templateId: command._templateId,
         _messageTemplateId: step.template._id,
-        channel: ChannelTypeEnum.IN_APP,
-        cta: step.template.cta,
-        _feedId: step.template._feedId,
-        transactionId: command.transactionId,
-        content: this.storeContent() ? chimeraBody || content : null,
-        payload: messagePayload,
-        providerId: integration.providerId,
         templateIdentifier: command.identifier,
+        transactionId: command.transactionId,
+        providerId: integration.providerId,
+        _feedId: step.template._feedId,
+        channel: ChannelTypeEnum.IN_APP,
         _jobId: command.jobId,
         ...(actor &&
           actor.type !== ActorTypeEnum.NONE && {
             actor,
             _actorId: command.job?._actorId,
           }),
+        ...channelData,
       });
     }
 
@@ -199,10 +239,8 @@ export class SendMessageInApp extends SendMessageBase {
         {
           $set: {
             seen: false,
-            cta: step.template.cta,
-            content,
-            payload: messagePayload,
             createdAt: new Date(),
+            ...channelData,
           },
         }
       );

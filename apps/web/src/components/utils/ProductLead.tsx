@@ -3,9 +3,9 @@ import { useLocalStorage } from '@mantine/hooks';
 import { CSSProperties, ReactNode, useEffect } from 'react';
 import styled from '@emotion/styled';
 
-import { IS_DOCKER_HOSTED } from '../../config';
 import { Button, colors, Text, Calendar, Close } from '@novu/design-system';
-import { useAuthContext } from '../providers/AuthProvider';
+import { IS_SELF_HOSTED } from '../../config';
+import { useAuth } from '../../hooks/useAuth';
 import { useSegment } from '../providers/SegmentProvider';
 import { When } from './When';
 
@@ -38,7 +38,6 @@ export const ProductLead = ({
   variant?: ProductLeadVariants;
   style?: CSSProperties;
 }) => {
-  const { currentUser } = useAuthContext();
   const [open, setOpen] = useLocalStorage<boolean>({
     key: id,
     defaultValue: true,
@@ -47,7 +46,7 @@ export const ProductLead = ({
   const segment = useSegment();
   const theme = useMantineTheme();
   const dark = theme.colorScheme === 'dark';
-  const isSelfHosted = IS_DOCKER_HOSTED;
+  const isSelfHosted = IS_SELF_HOSTED;
 
   useEffect(() => {
     segment.track('Banner seen - [Product lead]', {
@@ -103,11 +102,7 @@ export const ProductLead = ({
               segment.track('Scheduled call clicked - [Product lead]', {
                 feature: id,
               });
-              window.open(
-                `https://calendly.com/novuhq/novu-meeting?full_name=${currentUser?.firstName}&email=${
-                  currentUser?.email
-                }&utm_campaign=${id}&utm_source=${isSelfHosted ? 'self-hosted' : 'cloud'}`
-              );
+              window.open('https://notify.novu.co/meetings/novuhq/notifications-45min?utm_campaign=in-app');
             }}
             variant="outline"
           >

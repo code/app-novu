@@ -7,7 +7,7 @@ import { editor as NEditor } from 'monaco-editor';
 
 import { createTranslationMarks } from './createTranslationMarks';
 import { IVariable, useWorkflowVariables } from '../../../api/hooks';
-import { useEnvController } from '@novu/shared-web';
+import { useEnvironment } from '../../../hooks';
 
 export const CustomCodeEditor = ({
   onChange,
@@ -60,7 +60,7 @@ const CustomCodeEditorBase = ({
   variables: any;
   isDark: boolean;
 }) => {
-  const { readonly } = useEnvController();
+  const { readonly } = useEnvironment();
 
   const editorRef = useRef<NEditor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -98,7 +98,7 @@ const CustomCodeEditorBase = ({
 
         const handle = monaco.languages.registerCompletionItemProvider('handlebars', {
           triggerCharacters: ['{'],
-          provideCompletionItems: function (model, position) {
+          provideCompletionItems(model, position) {
             const word = model.getWordUntilPosition(position);
             const range = {
               startLineNumber: position.lineNumber,
@@ -110,7 +110,7 @@ const CustomCodeEditorBase = ({
             const suggestions = getSuggestions(monaco, range);
 
             return {
-              suggestions: suggestions,
+              suggestions,
             };
           },
         });

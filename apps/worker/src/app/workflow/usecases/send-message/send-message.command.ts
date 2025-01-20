@@ -1,6 +1,8 @@
 import { IsDefined, IsOptional, IsString } from 'class-validator';
 import { NotificationStepEntity, JobEntity } from '@novu/dal';
-import { EnvironmentWithUserCommand, ExecuteOutput, IChimeraChannelResponse } from '@novu/application-generic';
+import { EnvironmentWithUserCommand } from '@novu/application-generic';
+import { ExecuteOutput } from '@novu/framework/internal';
+import { WorkflowPreferences } from '@novu/shared';
 
 export class SendMessageCommand extends EnvironmentWithUserCommand {
   @IsDefined()
@@ -26,8 +28,8 @@ export class SendMessageCommand extends EnvironmentWithUserCommand {
   @IsDefined()
   notificationId: string;
 
-  @IsDefined()
-  _templateId: string;
+  @IsOptional()
+  _templateId?: string;
 
   @IsDefined()
   subscriberId: string;
@@ -45,5 +47,11 @@ export class SendMessageCommand extends EnvironmentWithUserCommand {
   job: JobEntity;
 
   @IsOptional()
-  chimeraData?: ExecuteOutput<IChimeraChannelResponse> | null;
+  bridgeData?: ExecuteOutput | null;
+
+  @IsDefined()
+  tags: string[];
+
+  @IsOptional()
+  statelessPreferences?: WorkflowPreferences;
 }

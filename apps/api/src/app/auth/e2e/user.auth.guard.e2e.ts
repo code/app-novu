@@ -1,9 +1,9 @@
 import { UserSession } from '@novu/testing';
 import { expect } from 'chai';
 import { ApiAuthSchemeEnum } from '@novu/shared';
-import { HttpRequestHeaderKeysEnum } from '../../shared/framework/types';
+import { HttpRequestHeaderKeysEnum } from '@novu/application-generic';
 
-describe('UserAuthGuard', () => {
+describe('UserAuthGuard #novu-v2', () => {
   let session: UserSession;
   const defaultPath = '/v1/test-auth/user-route';
   const apiInaccessiblePath = '/v1/test-auth/user-api-inaccessible-route';

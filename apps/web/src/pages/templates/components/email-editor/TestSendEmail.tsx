@@ -6,8 +6,6 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import styled from '@emotion/styled';
 import { ChannelTypeEnum, MemberStatusEnum } from '@novu/shared';
 
-import { errorMessage, successMessage } from '../../../../utils/notifications';
-import { useAuthContext } from '../../../../components/providers/AuthProvider';
 import {
   Button,
   Text,
@@ -20,8 +18,9 @@ import {
   inputStyles,
   useSelectStyles,
 } from '@novu/design-system';
+import { errorMessage, successMessage } from '../../../../utils/notifications';
+import { useAuth, useProcessVariables, useIntegrationLimit } from '../../../../hooks';
 import { getOrganizationMembers } from '../../../../api/organization';
-import { useProcessVariables, useIntegrationLimit } from '../../../../hooks';
 import { testSendEmailMessage } from '../../../../api/notification-templates';
 import { useStepFormPath } from '../../hooks/useStepFormPath';
 import type { IForm } from '../formTypes';
@@ -29,12 +28,12 @@ import { useTemplateEditorForm } from '../TemplateEditorFormProvider';
 
 export function TestSendEmail({
   isIntegrationActive,
-  chimera = false,
+  bridge = false,
 }: {
   isIntegrationActive: boolean;
-  chimera?: boolean;
+  bridge?: boolean;
 }) {
-  const { currentUser } = useAuthContext();
+  const { currentUser } = useAuth();
   const { control, watch } = useFormContext<IForm>();
   const path = useStepFormPath();
   const stepId = watch(`${path}.uuid`);
@@ -68,7 +67,7 @@ export function TestSendEmail({
 
   const processedVariables = useProcessVariables(template.variables);
   const [payloadValue, setPayloadValue] = useState('{}');
-  const [stepInputs, setStepInputs] = useState('{}');
+  const [stepControls, setStepControls] = useState('{}');
 
   useEffect(() => {
     setPayloadValue(processedVariables);
@@ -76,7 +75,7 @@ export function TestSendEmail({
 
   const onTestEmail = async () => {
     const payload = JSON.parse(payloadValue);
-    const inputs = JSON.parse(stepInputs);
+    const controls = JSON.parse(stepControls);
 
     try {
       await testSendEmailEvent({
@@ -86,14 +85,15 @@ export function TestSendEmail({
         subject: '',
         ...template,
         payload,
-        inputs,
+        controls,
         to: sendTo,
-        chimera,
-        content: chimera
+        bridge,
+        // eslint-disable-next-line no-nested-ternary
+        content: bridge
           ? ''
           : template.contentType === 'customHtml'
-          ? (template.htmlContent as string)
-          : template.content,
+            ? (template.htmlContent as string)
+            : template.content,
         layoutId: template.layoutId,
       });
       successMessage('Test sent successfully!');
@@ -142,7 +142,7 @@ export function TestSendEmail({
           mt={20}
           autosize
           styles={inputStyles}
-          label={chimera ? 'Trigger Data' : 'Variables'}
+          label={bridge ? 'Trigger Data' : 'Variables'}
           value={payloadValue}
           onChange={setPayloadValue}
           minRows={12}
@@ -158,16 +158,16 @@ export function TestSendEmail({
           }
         />
 
-        {chimera ? (
+        {bridge ? (
           <JsonInput
-            data-test-id="test-email-json-inputs"
+            data-test-id="test-email-json-controls"
             formatOnBlur
             mt={20}
             autosize
             styles={inputStyles}
-            label="Step Inputs"
-            value={stepInputs}
-            onChange={setStepInputs}
+            label="Step Controls"
+            value={stepControls}
+            onChange={setStepControls}
             minRows={12}
             validationError="Invalid JSON"
             rightSectionWidth={50}

@@ -22,7 +22,7 @@ import { StepTypeEnum } from '@novu/shared';
 
 import { colors } from '@novu/design-system';
 import { getChannel } from '../../utils/channels';
-import { useEnvController } from '../../hooks';
+import { useEnvironment } from '../../hooks';
 import type { IEdge, IFlowStep, INode } from './types';
 import { useTemplateEditorForm } from '../../pages/templates/components/TemplateEditorFormProvider';
 
@@ -93,7 +93,7 @@ export function FlowEditor({
   const [edges, setEdges, onEdgesChange] = useEdgesState<IEdge>([]);
   const reactFlowInstance = useReactFlow();
   const { template } = useTemplateEditorForm();
-  const { readonly } = useEnvController({}, template?.chimera);
+  const { readonly } = useEnvironment({ bridge: template?.bridge });
 
   useEffect(() => {
     const clientWidth = reactFlowWrapper.current?.clientWidth;
@@ -128,6 +128,7 @@ export function FlowEditor({
 
   const onDragOver = useCallback((event) => {
     event.preventDefault();
+    // eslint-disable-next-line no-param-reassign
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
@@ -165,7 +166,7 @@ export function FlowEditor({
     let isParentVariantNode = false;
 
     if (steps.length) {
-      for (let i = 0; i < steps.length; i++) {
+      for (let i = 0; i < steps.length; i += 1) {
         const step = steps[i];
         const oldNode = nodes[i + 1];
         const position =
@@ -233,7 +234,7 @@ export function FlowEditor({
       targetHandle: 'b',
       target: newId,
       type,
-      data: { addNewNode: addNewNode, parentId: parentId, childId: newId, readonly: readonly },
+      data: { addNewNode, parentId, childId: newId, readonly },
     };
   }
 

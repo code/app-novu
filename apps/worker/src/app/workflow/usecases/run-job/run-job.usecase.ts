@@ -1,9 +1,7 @@
-const nr = require('newrelic');
-
 import { Injectable, Logger } from '@nestjs/common';
-import { JobEntity, JobRepository, JobStatusEnum } from '@novu/dal';
+import { JobEntity, JobRepository, JobStatusEnum, NotificationRepository } from '@novu/dal';
 import { StepTypeEnum } from '@novu/shared';
-import * as Sentry from '@sentry/node';
+import { setUser } from '@sentry/node';
 import {
   getJobDigest,
   Instrument,
@@ -17,6 +15,8 @@ import { QueueNextJob, QueueNextJobCommand } from '../queue-next-job';
 import { SendMessage, SendMessageCommand } from '../send-message';
 import { PlatformException, EXCEPTION_MESSAGE_ON_WEBHOOK_FILTER } from '../../../shared/utils';
 
+const nr = require('newrelic');
+
 const LOG_CONTEXT = 'RunJob';
 
 @Injectable()
@@ -26,12 +26,13 @@ export class RunJob {
     private sendMessage: SendMessage,
     private queueNextJob: QueueNextJob,
     private storageHelperService: StorageHelperService,
+    private notificationRepository: NotificationRepository,
     private logger?: PinoLogger
   ) {}
 
   @InstrumentUsecase()
   public async execute(command: RunJobCommand): Promise<JobEntity | undefined> {
-    Sentry.setUser({
+    setUser({
       id: command.userId,
       organizationId: command.organizationId,
       environmentId: command.environmentId,
@@ -52,7 +53,6 @@ export class RunJob {
 
     if (activeDigestFollower) {
       job = this.assignNewDigestExecutor(activeDigestFollower);
-
       this.assignLogger(job);
     }
 
@@ -71,7 +71,16 @@ export class RunJob {
 
       await this.storageHelperService.getAttachments(job.payload?.attachments);
 
-      await this.sendMessage.execute(
+      const notification = await this.notificationRepository.findOne({
+        _id: job._notificationId,
+        _environmentId: job._environmentId,
+      });
+
+      if (!notification) {
+        throw new PlatformException(`Notification with id ${job._notificationId} not found`);
+      }
+
+      const sendMessageResult = await this.sendMessage.execute(
         SendMessageCommand.create({
           identifier: job.identifier,
           payload: job.payload ?? {},
@@ -89,16 +98,20 @@ export class RunJob {
           jobId: job._id,
           events: job.digest?.events,
           job,
+          tags: notification.tags || [],
+          statelessPreferences: job.preferences,
         })
       );
 
-      await this.jobRepository.updateStatus(job._environmentId, job._id, JobStatusEnum.COMPLETED);
+      if (sendMessageResult.status === 'success') {
+        await this.jobRepository.updateStatus(job._environmentId, job._id, JobStatusEnum.COMPLETED);
+      }
     } catch (error: any) {
       Logger.error({ error }, `Running job ${job._id} has thrown an error`, LOG_CONTEXT);
       if (job.step.shouldStopOnFail || this.shouldBackoff(error)) {
         shouldQueueNextJob = false;
       }
-      throw new PlatformException(error.message);
+      throw error;
     } finally {
       if (shouldQueueNextJob) {
         const newJob = await this.queueNextJob.execute(

@@ -4,6 +4,9 @@ import { IUserEntity, JobTitleEnum } from '@novu/shared';
 export class ServicesHashesDto {
   @ApiProperty()
   intercom?: string;
+
+  @ApiProperty()
+  plain?: string;
 }
 
 export class UserResponseDto implements IUserEntity {
@@ -37,7 +40,9 @@ export class UserResponseDto implements IUserEntity {
   @ApiProperty()
   servicesHashes?: ServicesHashesDto;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    enum: JobTitleEnum,
+  })
   jobTitle?: JobTitleEnum;
 
   @ApiProperty()

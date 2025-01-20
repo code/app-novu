@@ -1,4 +1,5 @@
 const fs = require('fs');
+const shell = require('shelljs');
 
 const nodeModulesExist = fs.existsSync('node_modules');
 const envInitialized = fs.existsSync('apps/api/src/.env');
@@ -37,9 +38,8 @@ const WEB_PROJECT_AND_WIDGET = 'Web project and Widget app';
 const WEB_PROJECT = 'Web project (Web, API, Worker, WS)';
 const WEB_TESTS = 'WEB tests';
 
-const RUN_CYPRESS_UI = 'Open Cypress UI';
-const RUN_CYPRESS_CLI = 'Run Cypress tests - CLI';
-const RUN_CYPRESS_COMPONENT_CLI = 'Run Cypress Component test - CLI';
+const RUN_PLAYWRIGHT_UI = 'Open Playwright UI';
+const RUN_PLAYWRIGHT_CLI = 'Run Playwright tests - CLI';
 
 async function setupRunner() {
   const ora = require('ora');
@@ -85,7 +85,7 @@ async function setupRunner() {
       type: 'list',
       name: 'runWebConfiguration',
       message: 'What section of the project you want to run?',
-      choices: [RUN_CYPRESS_UI, RUN_CYPRESS_CLI, RUN_CYPRESS_COMPONENT_CLI],
+      choices: [RUN_PLAYWRIGHT_UI, RUN_PLAYWRIGHT_CLI],
       when(answers) {
         return answers.runConfiguration === WEB_TESTS;
       },
@@ -96,7 +96,7 @@ async function setupRunner() {
     if (answers.action === DEV_ENVIRONMENT_SETUP) {
       shell.exec('npm run dev-environment-setup');
     } else if (answers.runConfiguration === WEB_PROJECT_AND_WIDGET) {
-      shell.exec('nx run-many --target=build --projects=@novu/api,@novu/worker');
+      shell.exec('nx run-many --target=build --projects=@novu/api-service,@novu/worker');
       shell.exec('npm run start:dev', { async: true });
 
       await waitPort({
@@ -127,7 +127,7 @@ async function setupRunner() {
       `);
     } else if (answers.runConfiguration === WEB_PROJECT) {
       try {
-        shell.exec('nx run-many --target=build --projects=@novu/api,@novu/worker,@novu/ws');
+        shell.exec('nx run-many --target=build --projects=@novu/api-service,@novu/worker,@novu/ws');
 
         shell.exec('npm run start:api', { async: true });
         shell.exec('npm run start:ws', { async: true });
@@ -162,7 +162,7 @@ async function setupRunner() {
         console.error(`Failed to spin up the project ❌`, e);
       }
     } else if (answers.runConfiguration === API_AND_WORKER_ONLY) {
-      shell.exec('nx run-many --target=build --projects=@novu/api,@novu/worker');
+      shell.exec('nx run-many --target=build --projects=@novu/api-service,@novu/worker');
       shell.exec('npm run start:api', { async: true });
       shell.exec('npm run start:worker', { async: true });
 
@@ -182,7 +182,7 @@ async function setupRunner() {
         Worker: http://127.0.0.1:3004
       `);
     } else if (answers.runApiConfiguration === API_INTEGRATION_TESTS) {
-      shell.exec('nx run-many --target=build --projects=@novu/api,@novu/worker');
+      shell.exec('nx run-many --target=build --projects=@novu/api-service,@novu/worker');
       shell.exec('npm run start:worker:test', { async: true });
 
       await waitPort({
@@ -192,7 +192,7 @@ async function setupRunner() {
 
       shell.exec('npm run start:integration:api', { async: true });
     } else if (answers.runApiConfiguration === API_E2E_TESTS) {
-      shell.exec('nx run-many --target=build --projects=@novu/api,@novu/worker');
+      shell.exec('nx run-many --target=build --projects=@novu/api-service,@novu/worker');
       shell.exec('npm run start:worker:test', { async: true });
 
       await waitPort({
@@ -201,13 +201,14 @@ async function setupRunner() {
       });
 
       shell.exec('npm run start:e2e:api', { async: true });
-    } else if ([RUN_CYPRESS_CLI, RUN_CYPRESS_UI].includes(answers.runWebConfiguration)) {
-      shell.exec('nx run-many --target=build --projects=@novu/api,@novu/worker,@novu/ws');
+    } else if ([RUN_PLAYWRIGHT_CLI, RUN_PLAYWRIGHT_UI].includes(answers.runWebConfiguration)) {
+      shell.exec('nx run-many --target=build --projects=@novu/api-service,@novu/worker,@novu/ws');
+      shell.exec('cd apps/web && npm run build:test');
 
       shell.exec('npm run start:api:test', { async: true });
       shell.exec('npm run start:worker:test', { async: true });
       shell.exec('npm run start:ws:test', { async: true });
-      shell.exec('cd apps/web && npm run start', { async: true });
+      shell.exec('cd apps/web && npm run start:test', { async: true });
 
       await waitPort({
         host: 'localhost',
@@ -228,15 +229,12 @@ async function setupRunner() {
         host: 'localhost',
         port: 4200,
       });
-
-      if (answers.runWebConfiguration === RUN_CYPRESS_UI) {
-        shell.exec('cd apps/web && npm run cypress:open');
-      } else if (answers.runWebConfiguration === RUN_CYPRESS_CLI) {
-        shell.exec('cd apps/web && npm run cypress:run');
+      shell.exec('cd apps/web && npm run test:e2e:install');
+      if (answers.runWebConfiguration === RUN_PLAYWRIGHT_UI) {
+        shell.exec('cd apps/web && npm run test:e2e:ui');
+      } else if (answers.runWebConfiguration === RUN_PLAYWRIGHT_CLI) {
+        shell.exec('cd apps/web && npm run test:e2e');
       }
-    } else if (answers.runWebConfiguration === RUN_CYPRESS_COMPONENT_CLI) {
-      shell.exec('npm run nx build @novu/web');
-      shell.exec('cd apps/web && npm run cypress:run:components');
     }
 
     return true;

@@ -1,23 +1,13 @@
-import styled from '@emotion/styled';
 import { Drawer, Loader, Stack } from '@mantine/core';
-import { useKeyDown } from '@novu/shared-web';
+import { useKeyDown } from '../hooks/useKeyDown';
 
 import { ActionButton } from '../button/ActionButton';
 import { colors } from '../config';
 import { ArrowLeft } from '../icons';
 import { When } from '../when';
 import { Close } from './Close';
-import { BodyHolder, FooterHolder, HeaderHolder, scrollable, useDrawerStyles } from './Sidebar.styles';
+import { BodyHolder, FooterHolder, HeaderHolder, Form, useDrawerStyles } from './Sidebar.styles';
 import { ISidebarBaseProps } from './Sidebar.types';
-
-const Form = styled.form<{ isParentScrollable: boolean }>`
-  height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  ${(props) => props.isParentScrollable && scrollable};
-`;
 
 export interface ISidebarProps extends ISidebarBaseProps {
   onSubmit?: React.FormEventHandler<HTMLFormElement>;
@@ -32,12 +22,13 @@ export const Sidebar = ({
   isLoading = false,
   isParentScrollable = false,
   styles,
+  navigationWidth,
   'data-test-id': dataTestId,
   onClose,
   onBack,
   onSubmit,
 }: ISidebarProps) => {
-  const { classes: drawerClasses } = useDrawerStyles({ isExpanded });
+  const { classes: drawerClasses } = useDrawerStyles({ isExpanded, navigationWidth });
   const onCloseCallback = () => {
     onClose();
   };

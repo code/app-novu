@@ -1,16 +1,6 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import {
-  DalService,
-  UserRepository,
-  OrganizationRepository,
-  EnvironmentRepository,
-  NotificationTemplateRepository,
-  SubscriberRepository,
-  NotificationRepository,
-  MessageRepository,
-  MemberRepository,
-} from '@novu/dal';
+import { DalService, SubscriberRepository, NotificationRepository, MessageRepository } from '@novu/dal';
 import {
   AnalyticsService,
   DalServiceHealthIndicator,
@@ -18,19 +8,10 @@ import {
   QueuesModule,
 } from '@novu/application-generic';
 
-import { SubscriberOnlineService } from './subscriber-online';
 import { JobTopicNameEnum } from '@novu/shared';
+import { SubscriberOnlineService } from './subscriber-online';
 
-const DAL_MODELS = [
-  UserRepository,
-  OrganizationRepository,
-  EnvironmentRepository,
-  NotificationTemplateRepository,
-  SubscriberRepository,
-  NotificationRepository,
-  MessageRepository,
-  MemberRepository,
-];
+const DAL_MODELS = [SubscriberRepository, NotificationRepository, MessageRepository];
 
 const dalService = {
   provide: DalService,

@@ -1,14 +1,17 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { buildUserKey, InvalidateCacheService } from '@novu/application-generic';
 import { UserRepository } from '@novu/dal';
-import * as bcrypt from 'bcrypt';
+import { hash, compare } from 'bcrypt';
 
 import { ApiException } from '../../../shared/exceptions/api.exception';
 import { UpdatePasswordCommand } from './update-password.command';
 
 @Injectable()
 export class UpdatePassword {
-  constructor(private invalidateCache: InvalidateCacheService, private userRepository: UserRepository) {}
+  constructor(
+    private invalidateCache: InvalidateCacheService,
+    private userRepository: UserRepository
+  ) {}
 
   async execute(command: UpdatePasswordCommand) {
     if (command.newPassword !== command.confirmPassword) {
@@ -23,7 +26,7 @@ export class UpdatePassword {
       throw new ApiException('OAuth user cannot change password.');
     }
 
-    const isAuthorized = await bcrypt.compare(command.currentPassword, user.password);
+    const isAuthorized = await compare(command.currentPassword, user.password);
 
     if (!isAuthorized) {
       throw new UnauthorizedException();
@@ -39,7 +42,7 @@ export class UpdatePassword {
   }
 
   private async setNewPassword(userId: string, newPassword: string) {
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    const newPasswordHash = await hash(newPassword, 10);
 
     await this.userRepository.update(
       {

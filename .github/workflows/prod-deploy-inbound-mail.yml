@@ -5,11 +5,14 @@ name: Deploy PROD Inbound Mail
 on:
   workflow_dispatch:
 
+env:
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
 jobs:
   test_inbound_mail:
     strategy:
       matrix:
-        name: [ 'novu/inbound-mail-ee', 'novu/inbound-mail' ]
+        name: ['novu/inbound-mail-ee', 'novu/inbound-mail']
     uses: ./.github/workflows/reusable-inbound-mail-e2e.yml
     with:
       ee: ${{ contains (matrix.name,'-ee') }}
@@ -28,9 +31,9 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        name: [ 'novu/inbound-mail-ee', 'novu/inbound-mail' ]
+        name: ['novu/inbound-mail-ee', 'novu/inbound-mail']
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-project
 
       - name: build api
@@ -79,7 +82,7 @@ jobs:
           DOCKER_BUILD_ARGUMENTS: >
             --cache-from type=registry,ref=ghcr.io/novuhq/cache:build-cache-${{ env.SERVICE_NAME }}-prod
             --cache-to type=registry,ref=ghcr.io/novuhq/cache:build-cache-${{ env.SERVICE_NAME }}-prod,mode=max
-            --platform=linux/amd64,linux/arm64 --provenance=false
+            --platform=linux/amd64
             --output=type=image,name=ghcr.io/novuhq/${{ matrix.name }},push-by-digest=true,name-canonical=true
         run: |
           echo $GH_PASSWORD | docker login ghcr.io -u $GH_ACTOR --password-stdin
@@ -89,7 +92,7 @@ jobs:
           docker tag novu-inbound-mail ghcr.io/$REGISTRY_OWNER/$DOCKER_NAME:$IMAGE_TAG
 
           docker run --network=host --name inbound-mail -dit --env NODE_ENV=test ghcr.io/$REGISTRY_OWNER/$DOCKER_NAME:$IMAGE_TAG
-          
+
           docker push ghcr.io/$REGISTRY_OWNER/$DOCKER_NAME:prod
           docker push ghcr.io/$REGISTRY_OWNER/$DOCKER_NAME:latest
           docker push ghcr.io/$REGISTRY_OWNER/$DOCKER_NAME:$IMAGE_TAG
@@ -108,7 +111,6 @@ jobs:
 
   deploy_prod_inbound_mail_us:
     needs:
-      - deploy_prod_inbound_mail_eu
       - build_prod_image
     uses: ./.github/workflows/reusable-app-service-deploy.yml
     secrets: inherit

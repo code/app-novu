@@ -1,18 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ClassConstructor, plainToInstance } from 'class-transformer';
-import { addDays } from 'date-fns';
 import {
-  DEFAULT_MESSAGE_GENERIC_RETENTION_DAYS,
-  DEFAULT_MESSAGE_IN_APP_RETENTION_DAYS,
-  DEFAULT_NOTIFICATION_RETENTION_DAYS,
-} from '@novu/shared';
-import { Model, Types, ProjectionType, FilterQuery, UpdateQuery, QueryOptions } from 'mongoose';
+  ClientSession,
+  FilterQuery,
+  Model,
+  ProjectionType,
+  QueryOptions,
+  QueryWithHelpers,
+  Types,
+  UpdateQuery,
+} from 'mongoose';
 import { DalException } from '../shared';
 
 export class BaseRepository<T_DBModel, T_MappedEntity, T_Enforcement> {
   public _model: Model<T_DBModel>;
 
-  constructor(protected MongooseModel: Model<T_DBModel>, protected entity: ClassConstructor<T_MappedEntity>) {
+  constructor(
+    protected MongooseModel: Model<T_DBModel>,
+    protected entity: ClassConstructor<T_MappedEntity>
+  ) {
     this._model = MongooseModel;
   }
 
@@ -41,6 +47,10 @@ export class BaseRepository<T_DBModel, T_MappedEntity, T_Enforcement> {
     return this.MongooseModel.countDocuments(query, {
       limit,
     });
+  }
+
+  async estimatedDocumentCount(): Promise<number> {
+    return this.MongooseModel.estimatedDocumentCount();
   }
 
   async aggregate(query: any[], options: { readPreference?: 'secondaryPreferred' | 'primary' } = {}): Promise<any> {
@@ -101,40 +111,112 @@ export class BaseRepository<T_DBModel, T_MappedEntity, T_Enforcement> {
     }
   }
 
-  private calcExpireDate(modelName: string, data: FilterQuery<T_DBModel> & T_Enforcement) {
-    let startDate: Date = new Date();
-    if (data.expireAt) {
-      startDate = new Date(data.expireAt);
+  private async createCursorBasedOrStatement({
+    isSortDesc,
+    paginateField,
+    after,
+    queryOrStatements,
+  }: {
+    isSortDesc: boolean;
+    paginateField?: string;
+    after: string;
+    queryOrStatements?: object[];
+  }): Promise<FilterQuery<T_DBModel>[]> {
+    const afterItem = await this.MongooseModel.findOne({ _id: after });
+    if (!afterItem) {
+      throw new DalException('Invalid after id');
     }
 
-    switch (modelName) {
-      case 'Message':
-        if (data.channel === 'in_app') {
-          return addDays(
-            startDate,
-            Number(process.env.MESSAGE_IN_APP_RETENTION_DAYS || DEFAULT_MESSAGE_IN_APP_RETENTION_DAYS)
-          );
-        } else {
-          return addDays(
-            startDate,
-            Number(process.env.MESSAGE_GENERIC_RETENTION_DAYS || DEFAULT_MESSAGE_GENERIC_RETENTION_DAYS)
-          );
-        }
-      case 'Notification':
-        return addDays(
-          startDate,
-          Number(process.env.NOTIFICATION_RETENTION_DAYS || DEFAULT_NOTIFICATION_RETENTION_DAYS)
-        );
-      default:
-        return null;
+    let cursorOrStatements: FilterQuery<T_DBModel>[] = [];
+    let enhancedCursorOrStatements: FilterQuery<T_DBModel>[] = [];
+    if (paginateField && afterItem[paginateField]) {
+      const paginatedFieldValue = afterItem[paginateField];
+      cursorOrStatements = [
+        { [paginateField]: isSortDesc ? { $lt: paginatedFieldValue } : { $gt: paginatedFieldValue } } as any,
+        { [paginateField]: { $eq: paginatedFieldValue }, _id: isSortDesc ? { $lt: after } : { $gt: after } },
+      ];
+      const firstStatement = (queryOrStatements ?? []).map((item) => ({
+        ...item,
+        ...cursorOrStatements[0],
+      }));
+      const secondStatement = (queryOrStatements ?? []).map((item) => ({
+        ...item,
+        ...cursorOrStatements[1],
+      }));
+      enhancedCursorOrStatements = [...firstStatement, ...secondStatement];
+    } else {
+      cursorOrStatements = [{ _id: isSortDesc ? { $lt: after } : { $gt: after } }];
+      const firstStatement = (queryOrStatements ?? []).map((item) => ({
+        ...item,
+        ...cursorOrStatements[0],
+      }));
+      enhancedCursorOrStatements = [...firstStatement];
     }
+
+    return enhancedCursorOrStatements.length > 0 ? enhancedCursorOrStatements : cursorOrStatements;
+  }
+
+  async cursorPagination({
+    query,
+    limit,
+    offset,
+    after,
+    sort,
+    paginateField,
+    enhanceQuery,
+  }: {
+    query?: FilterQuery<T_DBModel> & T_Enforcement;
+    limit: number;
+    offset: number;
+    after?: string;
+    sort?: any;
+    paginateField?: string;
+    enhanceQuery?: (query: QueryWithHelpers<Array<T_DBModel>, T_DBModel>) => any;
+  }): Promise<{ data: T_MappedEntity[]; hasMore: boolean }> {
+    const isAfterDefined = typeof after !== 'undefined';
+    const sortKeys = Object.keys(sort ?? {});
+    const isSortDesc = sortKeys.length > 0 && sort[sortKeys[0]] === -1;
+
+    let findQueryBuilder = this.MongooseModel.find({
+      ...query,
+    });
+    if (isAfterDefined) {
+      const orStatements = await this.createCursorBasedOrStatement({
+        isSortDesc,
+        paginateField,
+        after,
+        queryOrStatements: query?.$or,
+      });
+
+      findQueryBuilder = this.MongooseModel.find({
+        ...query,
+        $or: orStatements,
+      });
+    }
+
+    findQueryBuilder.sort(sort).limit(limit + 1);
+    if (!isAfterDefined) {
+      findQueryBuilder.skip(offset);
+    }
+
+    if (enhanceQuery) {
+      findQueryBuilder = enhanceQuery(findQueryBuilder);
+    }
+
+    const messages = await findQueryBuilder.exec();
+
+    const hasMore = messages.length > limit;
+    if (hasMore) {
+      messages.pop();
+    }
+
+    return {
+      data: this.mapEntities(messages),
+      hasMore,
+    };
   }
 
   async create(data: FilterQuery<T_DBModel> & T_Enforcement, options: IOptions = {}): Promise<T_MappedEntity> {
-    const expireAt = this.calcExpireDate(this.MongooseModel.modelName, data);
-    if (expireAt) {
-      data = { ...data, expireAt };
-    }
     const newEntity = new this.MongooseModel(data);
 
     const saveOptions = options?.writeConcern ? { w: options?.writeConcern } : {};
@@ -151,8 +233,12 @@ export class BaseRepository<T_DBModel, T_MappedEntity, T_Enforcement> {
     let result;
     try {
       result = await this.MongooseModel.insertMany(data, { ordered });
-    } catch (e) {
-      throw new DalException(e.message);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        throw new DalException(e.message);
+      } else {
+        throw new DalException('An unknown error occurred');
+      }
     }
 
     const insertedIds = result.map((inserted) => inserted._id);
@@ -202,6 +288,14 @@ export class BaseRepository<T_DBModel, T_MappedEntity, T_Enforcement> {
     return await Promise.all(promises);
   }
 
+  async upsert(query: FilterQuery<T_DBModel> & T_Enforcement, data: FilterQuery<T_DBModel> & T_Enforcement) {
+    return await this.MongooseModel.findOneAndUpdate(query, data, {
+      upsert: true,
+      new: true,
+      includeResultMetadata: true,
+    });
+  }
+
   async bulkWrite(bulkOperations: any, ordered = false): Promise<any> {
     return await this.MongooseModel.bulkWrite(bulkOperations, { ordered });
   }
@@ -212,6 +306,19 @@ export class BaseRepository<T_DBModel, T_MappedEntity, T_Enforcement> {
 
   protected mapEntities(data: any): T_MappedEntity[] {
     return plainToInstance<T_MappedEntity, T_MappedEntity[]>(this.entity, JSON.parse(JSON.stringify(data)));
+  }
+
+  /*
+   * Note about parallelism in transactions
+   *
+   * Running operations in parallel is not supported during a transaction.
+   * The use of Promise.all, Promise.allSettled, Promise.race, etc. to parallelize operations
+   * inside a transaction is undefined behaviour and should be avoided.
+   *
+   * Refer to https://mongoosejs.com/docs/transactions.html#note-about-parallelism-in-transactions
+   */
+  async withTransaction(fn: Parameters<ClientSession['withTransaction']>[0]) {
+    return (await this._model.db.startSession()).withTransaction(fn);
   }
 }
 

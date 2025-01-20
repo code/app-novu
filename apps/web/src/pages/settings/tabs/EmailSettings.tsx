@@ -3,7 +3,6 @@ import { ActionIcon, Center, Input as MantineInput } from '@mantine/core';
 import { Control, Controller, useForm } from 'react-hook-form';
 import { useClipboard } from '@mantine/hooks';
 import styled from '@emotion/styled';
-import { useMutation } from '@tanstack/react-query';
 import { showNotification } from '@mantine/notifications';
 import {
   colors,
@@ -17,10 +16,9 @@ import {
   WarningIcon,
   inputStyles,
 } from '@novu/design-system';
-import type { IResponseError } from '@novu/shared';
 
 import Card from '../../../components/layout/components/Card';
-import { useEffectOnce, useEnvController } from '../../../hooks';
+import { useEffectOnce, useEnvironment } from '../../../hooks';
 import { updateDnsSettings } from '../../../api/environment';
 import { validateMxRecord } from '../../../api/inbound-parse';
 import { MAIL_SERVER_DOMAIN } from '../../../config';
@@ -29,13 +27,7 @@ export const EmailSettings = () => {
   const mailServerDomain = `10 ${MAIL_SERVER_DOMAIN}`;
 
   const clipboardEnvironmentIdentifier = useClipboard({ timeout: 1000 });
-  const { readonly, environment, refetchEnvironment } = useEnvController();
-
-  const { mutateAsync: updateDnsSettingsMutation, isLoading: isUpdateDnsSettingsLoading } = useMutation<
-    { dns: { mxRecordConfigured: boolean; inboundParseDomain: string } },
-    IResponseError,
-    { payload: { inboundParseDomain: string | undefined }; environmentId: string }
-  >(({ payload, environmentId }) => updateDnsSettings(payload, environmentId));
+  const { environment, refetchEnvironments } = useEnvironment();
 
   const { setValue, handleSubmit, control } = useForm({
     defaultValues: {
@@ -72,7 +64,7 @@ export const EmailSettings = () => {
     const record = await validateMxRecord();
 
     if (environment?.dns && record.mxRecordConfigured !== environment.dns.mxRecordConfigured) {
-      await refetchEnvironment();
+      await refetchEnvironments();
     }
   }
 

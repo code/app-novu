@@ -7,7 +7,7 @@ import { ShouldStopOnFailSwitch } from '../ShouldStopOnFailSwitch';
 import { ReplyCallback, ReplyCallbackSwitch } from '../ReplyCallback';
 import { When } from '../../../../components/utils/When';
 import { UpdateButton } from '../../components/UpdateButton';
-import { useEnvController } from '../../../../hooks';
+import { useEnvironment } from '../../../../hooks';
 import { useTemplateEditorForm } from '../../components/TemplateEditorFormProvider';
 
 export function StepSettings() {
@@ -15,13 +15,13 @@ export function StepSettings() {
     channel: StepTypeEnum;
   }>();
   const { template } = useTemplateEditorForm();
-  const { chimera } = useEnvController({}, template?.chimera);
+  const { bridge } = useEnvironment({ bridge: template?.bridge });
 
   return (
     <>
       <Group position="apart" spacing={8}>
         <Group spacing={12}>
-          <When truthy={!chimera}>
+          <When truthy={!bridge}>
             <When truthy={channelType !== StepTypeEnum.DIGEST && channelType !== StepTypeEnum.DELAY}>
               <StepActiveSwitch />
               <ShouldStopOnFailSwitch />
@@ -33,7 +33,7 @@ export function StepSettings() {
         </Group>
         <UpdateButton />
       </Group>
-      <When truthy={!chimera}>
+      <When truthy={!bridge}>
         <ReplyCallback />
       </When>
     </>

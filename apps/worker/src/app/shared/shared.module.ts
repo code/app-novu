@@ -1,34 +1,9 @@
 import { Module } from '@nestjs/common';
 import {
-  ChangeRepository,
-  DalService,
-  EnvironmentRepository,
-  ExecutionDetailsRepository,
-  FeedRepository,
-  IntegrationRepository,
-  JobRepository,
-  LayoutRepository,
-  LogRepository,
-  MemberRepository,
-  MessageRepository,
-  MessageTemplateRepository,
-  NotificationGroupRepository,
-  NotificationRepository,
-  NotificationTemplateRepository,
-  OrganizationRepository,
-  SubscriberPreferenceRepository,
-  SubscriberRepository,
-  TenantRepository,
-  TopicRepository,
-  TopicSubscribersRepository,
-  UserRepository,
-  WorkflowOverrideRepository,
-} from '@novu/dal';
-import {
   analyticsService,
   BulkCreateExecutionDetails,
   cacheService,
-  CalculateDelayService,
+  ComputeJobWaitDurationService,
   CreateExecutionDetails,
   createNestLoggingModuleOptions,
   CreateNotificationJobs,
@@ -38,7 +13,9 @@ import {
   DigestFilterSteps,
   distributedLockService,
   EventsDistributedLockService,
+  ExecuteBridgeRequest,
   featureFlagsService,
+  GetDecryptedSecretKey,
   GetTenant,
   InvalidateCacheService,
   LoggerModule,
@@ -49,18 +26,35 @@ import {
   StorageHelperService,
   storageService,
   UpdateSubscriber,
+  UpdateSubscriberChannel,
   UpdateTenant,
 } from '@novu/application-generic';
+import {
+  ControlValuesRepository,
+  DalService,
+  EnvironmentRepository,
+  ExecutionDetailsRepository,
+  IntegrationRepository,
+  JobRepository,
+  LayoutRepository,
+  MessageRepository,
+  MessageTemplateRepository,
+  NotificationGroupRepository,
+  NotificationRepository,
+  NotificationTemplateRepository,
+  SubscriberRepository,
+  TenantRepository,
+  TopicRepository,
+  TopicSubscribersRepository,
+  WorkflowOverrideRepository,
+} from '@novu/dal';
 
-import * as packageJson from '../../../package.json';
-import { CreateLog } from './logs';
 import { JobTopicNameEnum } from '@novu/shared';
+import packageJson from '../../../package.json';
+import { UNIQUE_WORKER_DEPENDENCIES } from '../../config/worker-init.config';
 import { ActiveJobsMetricService } from '../workflow/services';
-import { UNIQUE_WORKER_DEPENDENCIES, workersToProcess } from '../../config/worker-init.config';
 
 const DAL_MODELS = [
-  UserRepository,
-  OrganizationRepository,
   EnvironmentRepository,
   ExecutionDetailsRepository,
   NotificationTemplateRepository,
@@ -69,18 +63,14 @@ const DAL_MODELS = [
   MessageRepository,
   MessageTemplateRepository,
   NotificationGroupRepository,
-  MemberRepository,
   LayoutRepository,
-  LogRepository,
   IntegrationRepository,
-  ChangeRepository,
   JobRepository,
-  FeedRepository,
-  SubscriberPreferenceRepository,
   TopicRepository,
   TopicSubscribersRepository,
   TenantRepository,
   WorkflowOverrideRepository,
+  ControlValuesRepository,
 ];
 
 const dalService = {
@@ -98,9 +88,8 @@ const PROVIDERS = [
   analyticsService,
   BulkCreateExecutionDetails,
   cacheService,
-  CalculateDelayService,
+  ComputeJobWaitDurationService,
   CreateExecutionDetails,
-  CreateLog,
   CreateNotificationJobs,
   CreateSubscriber,
   dalService,
@@ -114,12 +103,15 @@ const PROVIDERS = [
   StorageHelperService,
   storageService,
   UpdateSubscriber,
+  UpdateSubscriberChannel,
   UpdateTenant,
   GetTenant,
   CreateTenant,
   ProcessTenant,
   ...DAL_MODELS,
   ActiveJobsMetricService,
+  ExecuteBridgeRequest,
+  GetDecryptedSecretKey,
 ];
 
 @Module({

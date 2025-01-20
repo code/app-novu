@@ -8,7 +8,7 @@ import { WeekDaySelect } from './digest/WeekDaySelect';
 import { ScheduleMonthlyFields } from './digest/ScheduleMonthlyFields';
 import { When } from '../../../components/utils/When';
 import { useStepFormPath } from '../hooks/useStepFormPath';
-import { useEnvController } from '../../../hooks';
+import { useEnvironment } from '../../../hooks';
 import { useTemplateEditorForm } from '../components/TemplateEditorFormProvider';
 
 const convertUnitToLabel = (unit: DigestUnitEnum) => {
@@ -25,12 +25,14 @@ const convertUnitToLabel = (unit: DigestUnitEnum) => {
       return 'week';
     case DigestUnitEnum.MONTHS:
       return 'month';
+    default:
+      throw new Error('Invalid unit');
   }
 };
 
 export const TimedDigestMetadata = () => {
   const { template } = useTemplateEditorForm();
-  const { readonly } = useEnvController({}, template?.chimera);
+  const { readonly } = useEnvironment({ bridge: template?.bridge });
   const { control, watch, setValue } = useFormContext();
   const stepFormPath = useStepFormPath();
   const unit: DigestUnitEnum =

@@ -1,9 +1,9 @@
 import { Group } from '@mantine/core';
 import { Button, errorMessage, Invite, successMessage } from '@novu/design-system';
 import { IResponseError } from '@novu/shared';
-import { IS_DOCKER_HOSTED } from '@novu/shared-web';
 import { useMutation } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
+import { IS_SELF_HOSTED } from '../../../config';
 
 import { inviteMember } from '../../../api/organization';
 
@@ -33,17 +33,17 @@ export function MemberInviteForm({
   );
 
   async function onSubmit(data: IInviteMemberForm) {
-    const email = data.email;
+    const { email } = data;
     if (!email) return;
 
-    if (IS_DOCKER_HOSTED) {
+    if (IS_SELF_HOSTED) {
       inviteByLink(email);
     }
 
     try {
       await sendInvite(email);
       onSuccess();
-      if (!IS_DOCKER_HOSTED) {
+      if (!IS_SELF_HOSTED) {
         successMessage(`Invite sent to ${email}`);
       }
     } catch (err: unknown) {

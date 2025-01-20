@@ -4,12 +4,11 @@ import { useMemo } from 'react';
 import { Row } from 'react-table';
 import { ChannelTypeEnum } from '@novu/shared';
 
+import { Table, Text, withCellLoading, IExtendedColumn } from '@novu/design-system';
 import PageContainer from '../../components/layout/components/PageContainer';
 import PageHeader from '../../components/layout/components/PageHeader';
-import { Table, Text, withCellLoading, IExtendedColumn } from '@novu/design-system';
-import { useIntegrations } from '../../hooks';
+import { useEnvironment, useIntegrations } from '../../hooks';
 import { IntegrationsListToolbar } from './components/IntegrationsListToolbar';
-import { useFetchEnvironments } from '../../hooks/useFetchEnvironments';
 import { IntegrationNameCell } from './components/IntegrationNameCell';
 import type { ITableIntegration } from './types';
 import { IntegrationChannelCell } from './components/IntegrationChannelCell';
@@ -77,9 +76,9 @@ export const IntegrationsList = ({
   onRowClickCallback: (row: Row<ITableIntegration>) => void;
   onChannelClick: (channel: ChannelTypeEnum) => void;
 }) => {
-  const { environments, isLoading: areEnvironmentsLoading } = useFetchEnvironments();
+  const { environments, isLoaded } = useEnvironment();
   const { integrations, loading: areIntegrationsLoading } = useIntegrations();
-  const isLoading = areEnvironmentsLoading || areIntegrationsLoading;
+  const isLoading = !isLoaded || areIntegrationsLoading;
   const hasIntegrations = integrations && integrations?.length > 0;
 
   const data = useMemo<ITableIntegration[] | undefined>(() => {
@@ -88,7 +87,7 @@ export const IntegrationsList = ({
 
   return (
     <PageContainer title="Integrations">
-      <PageHeader title="Integrations Store" />
+      <PageHeader title="Integration Store" />
       <When truthy={hasIntegrations}>
         <Container fluid sx={{ padding: '0 24px 8px 30px' }}>
           <IntegrationsListToolbar onAddProviderClick={onAddProviderClick} areIntegrationsLoading={isLoading} />

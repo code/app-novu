@@ -1,7 +1,4 @@
-import {
-  IPreferenceChannels,
-  NotificationTemplateCustomData,
-} from '@novu/shared';
+import type { IPreferenceChannels, CustomDataType } from '@novu/shared';
 
 export interface IUnseenCountQuery {
   feedIdentifier?: string | string[];
@@ -36,7 +33,7 @@ export interface IUserPreferenceSettings {
     name: string;
     critical: boolean;
     tags?: string[];
-    data?: NotificationTemplateCustomData;
+    data?: CustomDataType;
   };
   preference: PreferenceSettingsType;
 }
@@ -49,4 +46,12 @@ export type PreferenceSettingsType = {
   enabled: boolean;
   channels: IPreferenceChannels;
 };
+
+export type ApiOptions = {
+  apiVersion?: string;
+  backendUrl?: string;
+  userAgent?: string;
+};
+
 export { ApiService } from './api/api.service';
+export { HttpClient } from './http-client';

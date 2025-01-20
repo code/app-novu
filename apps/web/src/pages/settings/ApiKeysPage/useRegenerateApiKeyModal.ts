@@ -1,15 +1,14 @@
 import { IResponseError } from '@novu/shared';
-import { getApiKeys, regenerateApiKeys } from '@novu/shared-web';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-
 import { showNotification } from '@mantine/notifications';
+import { useApiKeys } from '../../../hooks';
 
-export const useRegenerateApiKeyModal = () => {
+import { regenerateApiKeys } from '../../../api';
+
+export const useRegenerateSecretKeyModal = () => {
   const [isOpen, setModalIsOpen] = useState(false);
-
-  const { refetch: refetchApiKeys } = useQuery<{ key: string }[]>(['getApiKeys'], getApiKeys);
-
+  const { refetch: refetchSecretKeys } = useApiKeys();
   const { mutateAsync: regenerateApiKeysMutation } = useMutation<{ key: string }[], IResponseError>(regenerateApiKeys);
 
   async function openModal() {
@@ -22,7 +21,7 @@ export const useRegenerateApiKeyModal = () => {
 
   async function confirmAction() {
     await regenerateApiKeysMutation();
-    await refetchApiKeys();
+    await refetchSecretKeys();
     setModalIsOpen(false);
     showNotification({
       message: `Successfully regenerated API keys!`,

@@ -21,7 +21,7 @@ import { UpdateSubscriberPreferenceRequestDto } from '../../widgets/dtos/update-
 
 const axiosInstance = axios.create();
 
-describe('Trigger event - process subscriber /v1/events/trigger (POST)', function () {
+describe('Trigger event - process subscriber /v1/events/trigger (POST) #novu-v2', function () {
   let session: UserSession;
   let template: NotificationTemplateEntity;
   let subscriber: SubscriberEntity;
@@ -212,15 +212,7 @@ describe('Trigger event - process subscriber /v1/events/trigger (POST)', functio
 
     await updateSubscriberPreference(updateData, session.subscriberToken, template._id);
 
-    const rest = await notificationTemplateRepository.update(
-      {
-        _id: template._id,
-        _environmentId: session.environment._id,
-      },
-      {
-        critical: true,
-      }
-    );
+    await session.testAgent.put(`/v1/workflows/${template._id}`).send({ critical: true });
 
     await triggerEvent(session, template, payload);
 

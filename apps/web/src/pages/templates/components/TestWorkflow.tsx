@@ -4,24 +4,24 @@ import { useForm } from '@mantine/form';
 import { useWatch } from 'react-hook-form';
 
 import { useMutation } from '@tanstack/react-query';
-import * as Sentry from '@sentry/react';
-import * as capitalize from 'lodash.capitalize';
+import { captureException } from '@sentry/react';
+import capitalize from 'lodash.capitalize';
 import { useDisclosure } from '@mantine/hooks';
 import { IUserEntity, INotificationTriggerVariable } from '@novu/shared';
 import { Button, colors, inputStyles } from '@novu/design-system';
 
 import { errorMessage, successMessage } from '../../../utils/notifications';
-import { useAuthContext } from '../../../components/providers/AuthProvider';
+import { useAuth } from '../../../hooks/useAuth';
 import { getSubscriberValue, getPayloadValue } from './TriggerSnippetTabs';
 import { testTrigger } from '../../../api/notification-templates';
 import { ExecutionDetailsModalWrapper } from './ExecutionDetailsModalWrapper';
 import { TriggerSegmentControl } from './TriggerSegmentControl';
 import { WorkflowSidebar } from './WorkflowSidebar';
-import { useSegment } from '@novu/shared-web';
+import { useSegment } from '../../../components/providers/SegmentProvider';
 import { useOnboardingExperiment } from '../../../hooks/useOnboardingExperiment';
 import { OnBoardingAnalyticsEnum } from '../../quick-start/consts';
 
-const makeToValue = (subscriberVariables: INotificationTriggerVariable[], currentUser?: IUserEntity) => {
+const makeToValue = (subscriberVariables: INotificationTriggerVariable[], currentUser?: IUserEntity | null) => {
   const subsVars = getSubscriberValue(
     subscriberVariables,
     (variable) =>
@@ -41,7 +41,7 @@ function subscriberExist(subscriberVariables: INotificationTriggerVariable[]) {
 
 export function TestWorkflow({ trigger }) {
   const [transactionId, setTransactionId] = useState<string>('');
-  const { currentUser, currentOrganization } = useAuthContext();
+  const { currentUser, currentOrganization } = useAuth();
   const { mutateAsync: triggerTestEvent, isLoading } = useMutation(testTrigger);
   const [executionModalOpened, { close: closeExecutionModal, open: openExecutionModal }] = useDisclosure(false);
 
@@ -59,6 +59,7 @@ export function TestWorkflow({ trigger }) {
 
     return [{ name: 'subscriberId' }, ...(trigger?.subscriberVariables || [])];
   }, [trigger]);
+
   const variables = useMemo(() => [...(trigger?.variables || [])], [trigger]);
   const reservedVariables = useMemo(() => [...(trigger?.reservedVariables || [])], [trigger]);
 
@@ -97,10 +98,10 @@ export function TestWorkflow({ trigger }) {
     const to = JSON.parse(toValue);
     const payload = JSON.parse(payloadValue);
     const overrides = JSON.parse(overridesValue);
-    const snippet = snippetValue.reduce((acc, variable) => {
-      acc[variable.type] = JSON.parse(variable.variables);
+    const snippet = snippetValue.reduce((prev, variable) => {
+      prev[variable.type] = JSON.parse(variable.variables);
 
-      return acc;
+      return prev;
     }, {});
 
     try {
@@ -119,7 +120,7 @@ export function TestWorkflow({ trigger }) {
       successMessage('Template triggered successfully');
       openExecutionModal();
     } catch (e: any) {
-      Sentry.captureException(e);
+      captureException(e);
       errorMessage(e.message || 'Un-expected error occurred');
     }
   };

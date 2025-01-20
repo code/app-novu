@@ -1,5 +1,6 @@
 import { createStyles, Group } from '@mantine/core';
 import { colors, Text } from '@novu/design-system';
+import { cx } from '@novu/novui/css';
 import { useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import Frame from 'react-frame-component';
@@ -93,9 +94,11 @@ export const PreviewWeb = ({
   onLocaleChange,
   selectedLocale,
   locales,
-  chimera = false,
+  bridge = false,
+  source = 'studio',
+  classNames = {},
 }: {
-  integration: any;
+  integration?: any;
   subject?: string;
   content: string;
   loading?: boolean;
@@ -104,7 +107,15 @@ export const PreviewWeb = ({
   onLocaleChange: (locale: string) => void;
   selectedLocale?: string;
   locales: any[];
-  chimera?: boolean;
+  classNames?: {
+    browser?: string;
+    frame?: string;
+    content?: string;
+    contentContainer?: string;
+    skeleton?: string;
+  };
+  bridge?: boolean;
+  source?: 'studio' | 'playground' | 'dashboard';
 }) => {
   const [isEditOverlayVisible, setIsEditOverlayVisible] = useState(false);
 
@@ -127,7 +138,7 @@ export const PreviewWeb = ({
 
   return (
     <>
-      <div className={classes.browser}>
+      <div className={cx(classes.browser, classNames.browser)}>
         <div className={classes.bar}>
           <Group spacing={6}>
             <div className={classes.barAction}></div>
@@ -135,7 +146,7 @@ export const PreviewWeb = ({
             <div className={classes.barAction}></div>
           </Group>
         </div>
-        <div className={classes.contentContainer}>
+        <div className={cx(classes.contentContainer, classNames.contentContainer)}>
           <div className={classes.header}>
             <Group
               sx={{
@@ -150,16 +161,18 @@ export const PreviewWeb = ({
               <When truthy={!loading}>
                 <PreviewUserIcon />
                 <div>
-                  {!chimera && error && error.template?.subject && error.template?.subject?.message ? (
+                  {!bridge && error && error.template?.subject && error.template?.subject?.message ? (
                     <Text color={colors.error}>{error.template.subject.message}</Text>
                   ) : (
                     <>
                       <div data-test-id="preview-subject" className={classes.subject}>
                         {subject}
                       </div>
-                      <div data-test-id="preview-from" className={classes.from}>
-                        <EmailIntegrationInfo integration={integration} field={'from'} />
-                      </div>
+                      <When truthy={source !== 'playground'}>
+                        <div data-test-id="preview-from" className={classes.from}>
+                          <EmailIntegrationInfo integration={integration} field={'from'} />
+                        </div>
+                      </When>
                     </>
                   )}
                 </div>
@@ -178,9 +191,9 @@ export const PreviewWeb = ({
             <When truthy={isEditOverlayVisible && !loading}>
               <PreviewEditOverlay />
             </When>
-            <div className={classes.content}>
+            <div className={cx(classes.content, classNames.content)}>
               <When truthy={loading}>
-                <ContentSkeleton />
+                <ContentSkeleton className={classNames.skeleton} />
               </When>
               <When truthy={!loading}>
                 <ErrorBoundary
@@ -193,12 +206,16 @@ export const PreviewWeb = ({
                   )}
                   resetKeys={[content]}
                 >
-                  <iframe srcDoc={content} className={classes.frame} data-test-id="preview-content" />
-                  {/*    
+                  <iframe
+                    srcDoc={content}
+                    className={cx(classes.frame, classNames.frame)}
+                    data-test-id="preview-content"
+                  />
+                  {/*
               Issue with rendering email without html
               <Frame className={classes.frame} data-test-id="preview-content" initialContent={content}>
                     <></>
-                  </Frame>*/}
+                  </Frame> */}
                 </ErrorBoundary>
 
                 {error && error.template?.content && error.template?.content?.message && (

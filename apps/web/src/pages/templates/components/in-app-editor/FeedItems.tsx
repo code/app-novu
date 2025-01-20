@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Popover, useMantineTheme, Grid, ColorScheme, createStyles } from '@mantine/core';
 import { useClipboard } from '@mantine/hooks';
 import styled from '@emotion/styled';
-import * as Sentry from '@sentry/react';
+import { captureException } from '@sentry/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { showNotification } from '@mantine/notifications';
 import type { UseFormSetValue } from 'react-hook-form';
 import type { IResponseError, IFeedEntity } from '@novu/shared';
 
-import { FeedChip } from './FeedChip';
 import { colors, shadows, Text, Tooltip, Button, Copy, Trash } from '@novu/design-system';
+import { FeedChip } from './FeedChip';
 import { deleteFeed, getFeeds } from '../../../../api/feeds';
 import { QueryKeys } from '../../../../api/query.keys';
 import type { IForm } from '../formTypes';
@@ -172,7 +172,7 @@ function DeleteBlock({
         color: 'green',
       });
     } catch (e: any) {
-      Sentry.captureException(e);
+      captureException(e);
 
       showNotification({
         message: e.message || 'Un-expected error occurred',

@@ -27,11 +27,14 @@ export const useUpdateUserGlobalPreferences = ({
             enabled: enabled ?? old.preference.enabled,
             channels: {
               ...old.preference.channels,
-              ...preferences.reduce((acc, { channelType, enabled: channelEnabled }) => {
-                acc[channelType] = channelEnabled;
+              ...preferences.reduce(
+                (acc, { channelType, enabled: channelEnabled }) => {
+                  acc[channelType] = channelEnabled;
 
-                return acc;
-              }, {} as Record<string, boolean>),
+                  return acc;
+                },
+                {} as Record<string, boolean>
+              ),
             },
           },
         };
@@ -52,7 +55,7 @@ export const useUpdateUserGlobalPreferences = ({
     },
     onError: (error, variables, context) => {
       updateGlobalPreferenceChecked({
-        enabled: !variables.enabled ?? undefined,
+        enabled: !variables.enabled,
         preferences: variables.preferences,
       });
       onError?.(error, variables, context);

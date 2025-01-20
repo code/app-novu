@@ -1,8 +1,9 @@
 import { ChannelTypeEnum, EmailProviderIdEnum, SmsProviderIdEnum } from '@novu/shared';
 import { useMemo } from 'react';
-import { useEnvController } from '../useEnvController';
+import { useEnvironment } from '../useEnvironment';
 import { useActiveIntegrations } from './useActiveIntegrations';
 import { useIntegrationLimit } from './useIntegrationLimit';
+
 type UseHasActiveIntegrationsProps = {
   filterByEnv?: boolean;
   channelType?: ChannelTypeEnum;
@@ -10,7 +11,7 @@ type UseHasActiveIntegrationsProps = {
 
 export function useHasActiveIntegrations({ filterByEnv = true, channelType }: UseHasActiveIntegrationsProps) {
   const { integrations } = useActiveIntegrations();
-  const { environment } = useEnvController();
+  const { environment } = useEnvironment();
   const { isLimitReached: isEmailLimitReached } = useIntegrationLimit(ChannelTypeEnum.EMAIL);
   const { isLimitReached: isSmsLimitReached } = useIntegrationLimit(ChannelTypeEnum.SMS);
 

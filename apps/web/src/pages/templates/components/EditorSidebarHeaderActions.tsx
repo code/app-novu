@@ -7,7 +7,7 @@ import { ActionButton, Condition, ConditionPlus, Trash, VariantPlus } from '@nov
 
 import { Conditions, IConditions } from '../../../components/conditions';
 import { When } from '../../../components/utils/When';
-import { useEnvController } from '../../../hooks';
+import { useEnvironment } from '../../../hooks';
 import { useBasePath } from '../hooks/useBasePath';
 import { useFilterPartsList } from '../hooks/useFilterPartsList';
 import { useStepFormPath } from '../hooks/useStepFormPath';
@@ -24,7 +24,7 @@ const variantsCreatePath = '/variants/create';
 export const EditorSidebarHeaderActions = ({ preview = false }: { preview?: boolean }) => {
   const { control, watch, setValue } = useFormContext<IForm>();
   const { deleteStep, deleteVariant, template } = useTemplateEditorForm();
-  const { readonly: isReadonly } = useEnvController({}, template?.chimera);
+  const { readonly: isReadonly } = useEnvironment({ bridge: template?.bridge });
   const {
     stepUuid = '',
     channel = '',
@@ -69,12 +69,12 @@ export const EditorSidebarHeaderActions = ({ preview = false }: { preview?: bool
   const isAddVariantActionAvailable = (isUnderTheStepPath || isUnderVariantsListPath) && !isDelayedStep;
 
   const onAddVariant = () => {
-    const newPath = basePath + `/${channel}/${stepUuid}/variants/create`;
+    const newPath = `${basePath}/${channel}/${stepUuid}/variants/create`;
     navigate(newPath);
   };
 
   const onEdit = () => {
-    const newPath = basePath + `/${channel}/${stepUuid}`;
+    const newPath = `${basePath}/${channel}/${stepUuid}`;
     navigate(newPath);
   };
 
@@ -87,7 +87,7 @@ export const EditorSidebarHeaderActions = ({ preview = false }: { preview?: bool
 
       const variant = makeVariantFromStep(rootStep, { conditions: newConditions });
       append(variant);
-      navigate(basePath + `/${variant.template.type}/${stepUuid}/variants/${variant.uuid}`);
+      navigate(`${basePath}/${variant.template.type}/${stepUuid}/variants/${variant.uuid}`);
     } else {
       setValue(`${stepFormPath}.filters`, newConditions, { shouldDirty: true });
     }
@@ -124,6 +124,7 @@ export const EditorSidebarHeaderActions = ({ preview = false }: { preview?: bool
     setIsDeleteModalOpened(false);
   };
 
+  // eslint-disable-next-line no-nested-ternary
   const conditionAction = isReadonly ? 'View' : hasNoFilters ? 'Add' : 'Edit';
 
   return (

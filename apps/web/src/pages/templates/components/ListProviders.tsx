@@ -1,11 +1,11 @@
-import { MouseEventHandler, useMemo } from 'react';
+import { MouseEventHandler, PropsWithChildren, useMemo } from 'react';
 import styled from '@emotion/styled';
 import { Group, Stack, Text, UnstyledButton, useMantineColorScheme } from '@mantine/core';
 import { ChannelTypeEnum, NOVU_SMS_EMAIL_PROVIDERS } from '@novu/shared';
 import { Button, colors, Tooltip } from '@novu/design-system';
 
 import { When } from '../../../components/utils/When';
-import { useEnvController } from '../../../hooks';
+import { useEnvironment } from '../../../hooks';
 import { IntegrationEnvironmentPill } from '../../integrations/components/IntegrationEnvironmentPill';
 import { IntegrationStatus } from '../../integrations/components/IntegrationStatus';
 import type { IIntegratedProvider } from '../../integrations/types';
@@ -14,7 +14,7 @@ import { ChannelTitle } from './ChannelTitle';
 import { LackIntegrationAlert } from './LackIntegrationAlert';
 
 const getIntegrationIcon = (colorScheme: string, providerId: string) => {
-  return '/static/images/providers/' + colorScheme + '/square/' + providerId + '.svg';
+  return `/static/images/providers/${colorScheme}/square/${providerId}.svg`;
 };
 
 const ListProvidersContainer = styled.div`
@@ -37,7 +37,7 @@ const ConfigureButton = styled(Button)`
 `;
 
 const IntegrationButton = styled(UnstyledButton)<
-  { isActive: boolean; isDark: boolean } & { onClick?: MouseEventHandler<HTMLButtonElement> }
+  PropsWithChildren<{ isActive: boolean; isDark: boolean } & { onClick?: MouseEventHandler<HTMLButtonElement> }>
 >`
   width: 100%;
   padding: 0.5rem 0.75rem;
@@ -70,7 +70,7 @@ export const ListProviders = ({
   setProvider: (provider: IIntegratedProvider) => void;
 }) => {
   const { colorScheme } = useMantineColorScheme();
-  const { environment: currentEnvironment } = useEnvController();
+  const { environment: currentEnvironment } = useEnvironment();
   const containsNovuProvider = useMemo(
     () =>
       NOVU_SMS_EMAIL_PROVIDERS.some(

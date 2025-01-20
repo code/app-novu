@@ -2,20 +2,19 @@ import { Button, Input, inputStyles } from '@novu/design-system';
 import { FC } from 'react';
 import { Controller } from 'react-hook-form';
 
+import { css, cx } from '@novu/novui/css';
+import { HStack, Stack } from '@novu/novui/jsx';
+import { text } from '@novu/novui/recipes';
+import { Timeline as MantineTimeline } from '@mantine/core';
 import { ClipboardIconButton } from '../../../components';
 import { Timeline } from '../../../components/Timeline';
-import { css, cx } from '../../../styled-system/css';
-import { HStack, Stack } from '../../../styled-system/jsx';
-import { text } from '../../../styled-system/recipes';
 import { SettingsPageContainer } from '../SettingsPageContainer';
 import { Text } from './WebhookPage.shared';
 
 // Unfortunately, a wrapper around TimelineItem prevented any styles from applying, so have to use direct import for now
-import { Timeline as MantineTimeline } from '@mantine/core';
 import { useWebhookPage } from './useWebhookPage';
 import { WebhookClaimStatusDisplay } from './WebhookClaimStatusDisplay';
 import { WebhookAdditionalInformationLink } from './WebhookAdditionalInformationLink';
-import { useSettingsEnvRedirect } from '../useSettingsEnvRedirect';
 
 const codeValueInputClassName = css({
   '& input': {
@@ -27,12 +26,9 @@ const codeValueInputClassName = css({
 });
 
 // source: https://www.geeksforgeeks.org/how-to-validate-a-domain-name-using-regular-expression/
-const DOMAIN_REGEX = /^(?!-)[A-Za-z0-9-]+([\-\.]{1}[a-z0-9]+)*\.[A-Za-z]{2,6}$/;
+const DOMAIN_REGEX = /^(?!-)[A-Za-z0-9-]+([-.]{1}[a-z0-9]+)*\.[A-Za-z]{2,6}$/;
 
 export const WebhookPage: FC = () => {
-  // redirect user if an invalid env name is provided in the URL
-  useSettingsEnvRedirect();
-
   const {
     claimStatus,
     handleCheckRecords,
@@ -84,7 +80,11 @@ export const WebhookPage: FC = () => {
                   },
                 }}
                 render={({ field, fieldState }) => (
-                  <HStack width={'100%'} className={css({ height: 'components.input.height', marginTop: '50' })}>
+                  <HStack
+                    width={'100%'}
+                    className={css({ height: 'components.input.height', marginTop: '50' })}
+                    gap="molecules.form.input.button"
+                  >
                     <Input
                       {...field}
                       id="inbound-parse-domain-input"

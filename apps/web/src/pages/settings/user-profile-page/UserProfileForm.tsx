@@ -1,10 +1,10 @@
 import { ChangeEventHandler, FC } from 'react';
 import { SubmitHandler, useController, useForm, ValidationRule } from 'react-hook-form';
-import * as capitalize from 'lodash.capitalize';
+import capitalize from 'lodash.capitalize';
 import { Button, errorMessage, Input, successMessage } from '@novu/design-system';
 import { IUserEntity, UploadTypesEnum } from '@novu/shared';
 
-import { css } from '../../../styled-system/css';
+import { css } from '@novu/novui/css';
 import { ProfileImage } from '../../../components/shared';
 import { useUpdateUserProfile } from '../../../api/hooks';
 import { useUploadToStorage } from '../../../api/hooks/useUploadToStorage';
@@ -59,13 +59,13 @@ export const UserProfileForm: FC<IUserProfileFormProps> = ({ currentUser }) => {
       reset(makeFormData(newUserData));
     },
     onError: (e) => {
-      errorMessage('Failed to update profile: ' + e.message);
+      errorMessage(`Failed to update profile: ${e.message}`);
     },
   });
 
   const { uploadToStorage, isLoading: isUploadingImage } = useUploadToStorage({
     onError: (e) => {
-      errorMessage('Failed to upload profile image: ' + e.message);
+      errorMessage(`Failed to upload profile image: ${e.message}`);
     },
   });
 

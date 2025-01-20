@@ -5,7 +5,7 @@ import { addCompleter } from 'ace-builds/src-noconflict/ext-language_tools';
 import { Card } from '@mantine/core';
 import { SystemVariablesWithTypes, HandlebarHelpers } from '@novu/shared';
 import { colors } from '@novu/design-system';
-import { useEnvController } from '../../../../hooks';
+import { useEnvironment } from '../../../../hooks';
 
 export function EmailCustomCodeEditor({
   onChange,
@@ -16,9 +16,9 @@ export function EmailCustomCodeEditor({
   value?: string;
   height?: string;
 }) {
-  const { readonly } = useEnvController();
+  const { readonly } = useEnvironment();
   addCompleter({
-    getCompletions: function (editor, session, pos, prefix, callback) {
+    getCompletions(editor, session, pos, prefix, callback) {
       const systemVars = Object.keys(SystemVariablesWithTypes)
         .map((name) => {
           const type = SystemVariablesWithTypes[name];

@@ -1,9 +1,10 @@
-import * as mongoose from 'mongoose';
-import { Schema } from 'mongoose';
-import * as mongooseDelete from 'mongoose-delete';
+import { WorkflowTypeEnum } from '@novu/shared';
+import mongoose, { Schema } from 'mongoose';
 
 import { schemaOptions } from '../schema-default.options';
 import { NotificationTemplateDBModel } from './notification-template.entity';
+
+const mongooseDelete = require('mongoose-delete');
 
 const variantSchemePart = {
   active: {
@@ -18,12 +19,13 @@ const variantSchemePart = {
     type: Schema.Types.Boolean,
     default: false,
   },
+  issues: Schema.Types.Mixed,
   uuid: Schema.Types.String,
   stepId: Schema.Types.String,
   name: Schema.Types.String,
   type: {
     type: Schema.Types.String,
-    default: 'REGULAR',
+    default: WorkflowTypeEnum.REGULAR,
   },
   filters: [
     {
@@ -110,7 +112,7 @@ const notificationTemplateSchema = new Schema<NotificationTemplateDBModel>(
     },
     type: {
       type: Schema.Types.String,
-      default: 'REGULAR',
+      default: WorkflowTypeEnum.REGULAR,
     },
     draft: {
       type: Schema.Types.Boolean,
@@ -196,6 +198,12 @@ const notificationTemplateSchema = new Schema<NotificationTemplateDBModel>(
         default: true,
       },
     },
+    origin: {
+      type: Schema.Types.String,
+    },
+    status: {
+      type: Schema.Types.String,
+    },
     _environmentId: {
       type: Schema.Types.ObjectId,
       ref: 'Environment',
@@ -215,8 +223,9 @@ const notificationTemplateSchema = new Schema<NotificationTemplateDBModel>(
     data: Schema.Types.Mixed,
     rawData: Schema.Types.Mixed,
     payloadSchema: Schema.Types.Mixed,
+    issues: Schema.Types.Mixed,
   },
-  schemaOptions
+  { ...schemaOptions, minimize: false }
 );
 
 notificationTemplateSchema.virtual('steps.template', {
@@ -264,7 +273,6 @@ notificationTemplateSchema.index({
 
 notificationTemplateSchema.plugin(mongooseDelete, { deletedAt: true, deletedBy: true, overrideMethods: 'all' });
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const NotificationTemplate =
   (mongoose.models.NotificationTemplate as mongoose.Model<NotificationTemplateDBModel>) ||
   mongoose.model<NotificationTemplateDBModel>('NotificationTemplate', notificationTemplateSchema);

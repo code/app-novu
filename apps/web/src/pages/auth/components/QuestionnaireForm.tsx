@@ -1,46 +1,59 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Controller, useForm } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
-import decode from 'jwt-decode';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Group, Input as MantineInput } from '@mantine/core';
+import { captureException } from '@sentry/react';
 
-import { JobTitleEnum, jobTitleToLabelMapper, ProductUseCasesEnum } from '@novu/shared';
-import type { ProductUseCases, IResponseError, ICreateOrganizationDto, IJwtPayload } from '@novu/shared';
 import {
-  Button,
-  Digest,
-  HalfClock,
-  Input,
-  inputStyles,
-  MultiChannel,
-  RingingBell,
-  Select,
-  Translation,
-} from '@novu/design-system';
+  FeatureFlagsKeysEnum,
+  ICreateOrganizationDto,
+  IResponseError,
+  JobTitleEnum,
+  jobTitleToLabelMapper,
+  ProductUseCases,
+  ProductUseCasesEnum,
+} from '@novu/shared';
+import { Button, Input, inputStyles, Select } from '@novu/design-system';
 
-import { api } from '../../../api/api.client';
-import { useAuthContext } from '../../../components/providers/AuthProvider';
-import { useVercelIntegration, useVercelParams } from '../../../hooks';
-import { ROUTES } from '../../../constants/routes.enum';
-import { DynamicCheckBox } from './dynamic-checkbox/DynamicCheckBox';
 import styled from '@emotion/styled/macro';
-import { useDomainParser } from './useDomainHook';
-import { OnboardingExperimentV2ModalKey } from '../../../constants/experimentsConstants';
+import { api } from '../../../api/api.client';
+import { useAuth } from '../../../hooks/useAuth';
+import { useEffectOnce, useEnvironment, useFeatureFlag, useVercelIntegration, useVercelParams } from '../../../hooks';
+import { ROUTES } from '../../../constants/routes';
+import { DynamicCheckBox } from './dynamic-checkbox/DynamicCheckBox';
+import { useSegment } from '../../../components/providers/SegmentProvider';
+import { BRIDGE_SYNC_SAMPLE_ENDPOINT } from '../../../config/index';
+import { QueryKeys } from '../../../api/query.keys';
+import { useWebContainerSupported } from '../../../hooks/useWebContainerSupport';
+import { useContainer } from '../../../hooks/useContainer';
 
 export function QuestionnaireForm() {
+  const queryClient = useQueryClient();
+  const { initializeWebContainer } = useContainer();
+  const { isSupported } = useWebContainerSupported();
+  const isV2Enabled = useFeatureFlag(FeatureFlagsKeysEnum.IS_V2_ENABLED);
+  const isPlaygroundOnboardingEnabled = useFeatureFlag(FeatureFlagsKeysEnum.IS_PLAYGROUND_ONBOARDING_ENABLED);
+
+  useEffectOnce(() => {
+    if (isSupported) {
+      initializeWebContainer();
+    }
+  }, isPlaygroundOnboardingEnabled);
+
   const [loading, setLoading] = useState<boolean>();
   const {
     handleSubmit,
     formState: { errors },
     control,
-    setError,
   } = useForm<IOrganizationCreateForm>({});
   const navigate = useNavigate();
-  const { setToken, token } = useAuthContext();
+  const { login, currentOrganization } = useAuth();
+  const { refetchEnvironments } = useEnvironment();
   const { startVercelSetup } = useVercelIntegration();
   const { isFromVercel } = useVercelParams();
-  const { parse } = useDomainParser();
+  const segment = useSegment();
+  const location = useLocation();
 
   const { mutateAsync: createOrganizationMutation } = useMutation<
     { _id: string },
@@ -48,36 +61,27 @@ export function QuestionnaireForm() {
     ICreateOrganizationDto
   >((data: ICreateOrganizationDto) => api.post(`/v1/organizations`, data));
 
-  useEffect(() => {
-    if (token) {
-      const userData = decode<IJwtPayload>(token);
-
-      if (userData.environmentId) {
-        if (isFromVercel) {
-          startVercelSetup();
-
-          return;
-        }
-
-        navigate(ROUTES.HOME);
-      }
-    }
-  }, [token, navigate, isFromVercel, startVercelSetup]);
-
   async function createOrganization(data: IOrganizationCreateForm) {
     const { organizationName, ...rest } = data;
-    const createDto: ICreateOrganizationDto = { ...rest, name: organizationName };
+    const selectedLanguages = Object.keys(data.language || {}).filter((key) => data.language && data.language[key]);
+
+    const createDto: ICreateOrganizationDto = {
+      ...rest,
+      name: organizationName,
+      language: selectedLanguages,
+    };
     const organization = await createOrganizationMutation(createDto);
+
     const organizationResponseToken = await api.post(`/v1/auth/organizations/${organization._id}/switch`, {});
-    localStorage.setItem(OnboardingExperimentV2ModalKey, 'true');
-    setToken(organizationResponseToken);
-  }
+    await login(organizationResponseToken);
 
-  function jwtHasKey(key: string) {
-    if (!token) return false;
-    const jwt = decode<IJwtPayload>(token);
+    segment.track('Create Organization Form Submitted', {
+      location: (location.state as any)?.origin || 'web',
+      language: selectedLanguages,
+      jobTitle: data.jobTitle,
+    });
 
-    return jwt && jwt[key];
+    return organization;
   }
 
   const onCreateOrganization = async (data: IOrganizationCreateForm) => {
@@ -85,8 +89,25 @@ export function QuestionnaireForm() {
 
     setLoading(true);
 
-    if (!jwtHasKey('organizationId')) {
-      await createOrganization({ ...data });
+    if (!currentOrganization) {
+      const organization = await createOrganization({ ...data });
+
+      await refetchEnvironments();
+
+      try {
+        await api.post(`/v1/bridge/sync?source=sample-workspace`, {
+          bridgeUrl: BRIDGE_SYNC_SAMPLE_ENDPOINT,
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(e);
+
+        captureException(e);
+      }
+
+      await queryClient.refetchQueries({ queryKey: [QueryKeys.myEnvironments, organization?._id] });
+    } else {
+      await refetchEnvironments();
     }
 
     setLoading(false);
@@ -96,9 +117,22 @@ export function QuestionnaireForm() {
       return;
     }
 
-    const firstUsecase = findFirstUsecase(data.productUseCases) ?? '';
-    const mappedUsecase = firstUsecase.replace('_', '-');
-    navigate(`${ROUTES.GET_STARTED}?tab=${mappedUsecase}`);
+    if (isV2Enabled) {
+      if (isJobTitleIsTech(data.jobTitle)) {
+        if (isPlaygroundOnboardingEnabled && isSupported) {
+          navigate(ROUTES.DASHBOARD_PLAYGROUND);
+        } else {
+          trackRedirectionToOnboarding();
+          navigate(ROUTES.DASHBOARD_ONBOARDING);
+        }
+      } else {
+        navigate(ROUTES.GET_STARTED);
+      }
+
+      return;
+    }
+
+    navigate(ROUTES.GET_STARTED);
   };
 
   /**
@@ -112,8 +146,37 @@ export function QuestionnaireForm() {
     }
   `;
 
+  const trackRedirectionToOnboarding = () => {
+    if (isPlaygroundOnboardingEnabled && !isSupported) {
+      segment.track(
+        'Redirected to onboarding page because the playground was not supported on the browser - [Sign-Up]'
+      );
+    }
+  };
+
   return (
     <form noValidate name="create-app-form" onSubmit={handleSubmit(onCreateOrganization)}>
+      <Controller
+        name="organizationName"
+        control={control}
+        rules={{
+          required: 'Please specify your company name',
+        }}
+        render={({ field }) => {
+          return (
+            <Input
+              label="Company name"
+              {...field}
+              error={errors.organizationName?.message}
+              placeholder="Enter your company name"
+              data-test-id="questionnaire-company-name"
+              mt={32}
+              required
+            />
+          );
+        }}
+      />
+
       <Controller
         name="jobTitle"
         control={control}
@@ -140,70 +203,24 @@ export function QuestionnaireForm() {
       />
 
       <Controller
-        name="organizationName"
+        name="language"
         control={control}
         rules={{
-          required: 'Please specify your company name',
-        }}
-        render={({ field }) => {
-          return (
-            <Input
-              label="Company name"
-              {...field}
-              error={errors.organizationName?.message}
-              placeholder="Enter your company name"
-              data-test-id="questionnaire-company-name"
-              mt={32}
-              required
-            />
-          );
-        }}
-      />
-
-      <Controller
-        name="domain"
-        control={control}
-        rules={{
-          validate: {
-            isValiDomain: (value) => {
-              const val = parse(value as string);
-
-              if (value && !val.isIcann) {
-                return 'Please provide a valid domain';
-              }
-            },
-          },
-        }}
-        render={({ field }) => {
-          return (
-            <Input
-              label="Company domain"
-              {...field}
-              error={errors.domain?.message}
-              placeholder="my-company.com"
-              data-test-id="questionnaire-company-domain"
-              mt={32}
-            />
-          );
-        }}
-      />
-
-      <Controller
-        name="productUseCases"
-        control={control}
-        rules={{
-          required: 'Please specify your use case',
+          required: 'Please specify your back-end languages',
         }}
         render={({ field, fieldState }) => {
           function handleCheckboxChange(e, channelType) {
-            const newUseCases: ProductUseCases = field.value || {};
-            newUseCases[channelType] = e.currentTarget.checked;
-            field.onChange(newUseCases);
+            const languages = field.value || {};
+
+            languages[channelType] = e.currentTarget.checked;
+
+            field.onChange(languages);
           }
 
           return (
             <MantineInput.Wrapper
-              label="What do you plan to use Novu for?"
+              data-test-id="language-checkbox"
+              label="Choose your back-end stack"
               styles={inputStyles}
               error={fieldState.error?.message}
               mt={32}
@@ -212,16 +229,14 @@ export function QuestionnaireForm() {
               <Group
                 mt={8}
                 mx={'8px'}
-                style={{ marginLeft: '-12px', marginRight: '-12px', gap: '0', justifyContent: 'space-between' }}
+                style={{ marginLeft: '-1px', marginRight: '-3px', gap: '0', justifyContent: 'space-between' }}
               >
                 <>
-                  {checkBoxData.map((item) => (
+                  {backendLanguages.map((item) => (
                     <DynamicCheckBox
-                      Icon={item.icon}
                       label={item.label}
-                      onChange={(e) => handleCheckboxChange(e, item.type)}
-                      key={item.type}
-                      type={item.type}
+                      onChange={(e) => handleCheckboxChange(e, item.label)}
+                      key={item.label}
                     />
                   ))}
                 </>
@@ -237,19 +252,31 @@ export function QuestionnaireForm() {
   );
 }
 
-const checkBoxData = [
-  { type: ProductUseCasesEnum.IN_APP, icon: RingingBell, label: 'In-app' },
-  { type: ProductUseCasesEnum.MULTI_CHANNEL, icon: MultiChannel, label: 'Multi-channel' },
-  { type: ProductUseCasesEnum.DIGEST, icon: Digest, label: 'Digest' },
-  { type: ProductUseCasesEnum.DELAY, icon: HalfClock, label: 'Delay' },
-  { type: ProductUseCasesEnum.TRANSLATION, icon: Translation, label: 'Translate' },
+const backendLanguages = [
+  { label: 'Node.js' },
+  { label: 'Python' },
+  { label: 'Go' },
+  { label: 'PHP' },
+  { label: 'Rust' },
+  { label: 'Java' },
+  { label: 'Other' },
+];
+
+const frontendFrameworks = [
+  { label: 'React' },
+  { label: 'Vue' },
+  { label: 'Angular' },
+  { label: 'Flutter' },
+  { label: 'React Native' },
+  { label: 'Other' },
 ];
 
 interface IOrganizationCreateForm {
   organizationName: string;
   jobTitle: JobTitleEnum;
   domain?: string;
-  productUseCases?: ProductUseCases;
+  language?: string[];
+  frontendStack?: string[];
 }
 
 function findFirstUsecase(useCases: ProductUseCases | undefined): ProductUseCasesEnum | undefined {
@@ -260,4 +287,14 @@ function findFirstUsecase(useCases: ProductUseCases | undefined): ProductUseCase
   }
 
   return undefined;
+}
+
+function isJobTitleIsTech(jobTitle: JobTitleEnum) {
+  return [
+    JobTitleEnum.ENGINEER,
+    JobTitleEnum.ENGINEERING_MANAGER,
+    JobTitleEnum.ARCHITECT,
+    JobTitleEnum.FOUNDER,
+    JobTitleEnum.STUDENT,
+  ].includes(jobTitle);
 }

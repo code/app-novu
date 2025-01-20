@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
 import { Popover } from '@novu/design-system';
+import styled from '@emotion/styled';
 import {
   guidePreview,
   guidePlayground,
@@ -11,13 +12,12 @@ import {
   HINT_MIDDLE_OPACITY,
   HINT_VISIBLE_OPACITY,
 } from './consts';
-import { ROUTES } from '../../../constants/routes.enum';
+import { ROUTES } from '../../../constants/routes';
 import { parseUrl } from '../../../utils/routeUtils';
 import { OnBoardingAnalyticsEnum } from '../../../pages/quick-start/consts';
 import { useSegment } from '../../providers/SegmentProvider';
 import { useDigestDemoFlowContext } from './DigestDemoFlowProvider';
 import { NodeStep } from '../../workflow';
-import styled from '@emotion/styled';
 
 const getOpacity = (id: string, hoveredHintId?: string, sequence?: { opacity: number }): number => {
   if (hoveredHintId) {

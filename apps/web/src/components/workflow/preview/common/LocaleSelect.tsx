@@ -2,7 +2,8 @@ import styled from '@emotion/styled';
 import { SelectItemProps, Group } from '@mantine/core';
 import { Select, ISelectProps, Text } from '@novu/design-system';
 import { forwardRef } from 'react';
-import { IS_DOCKER_HOSTED } from '../../../../config';
+import { IS_SELF_HOSTED } from '../../../../config';
+import { FlagIcon } from '../../../../ee/translations';
 
 const rightSectionWidth = 20;
 
@@ -22,7 +23,7 @@ export function LocaleSelect({
   dropdownPosition?: ISelectProps['dropdownPosition'];
 }) {
   // Do not render locale select if self-hosted or no locale or only one locale
-  if (IS_DOCKER_HOSTED || locales.length < 2) {
+  if (IS_SELF_HOSTED || locales.length < 2) {
     return null;
   }
 
@@ -36,7 +37,7 @@ export function LocaleSelect({
             label: locale.langName,
           };
         })}
-        icon={<FlagIcon locale={value} />}
+        icon={value && <FlagIcon locale={value} />}
         loading={isLoading}
         limit={50}
         searchable
@@ -58,25 +59,11 @@ export function LocaleSelect({
 const SelectItem = forwardRef<HTMLDivElement, SelectItemProps>(({ label, value, ...others }: SelectItemProps, ref) => {
   return (
     <Group ref={ref} noWrap {...others}>
-      <FlagIcon locale={value} />
+      {value && <FlagIcon locale={value} />}
       <Text rows={1}> {label}</Text>
     </Group>
   );
 });
-
-export const FlagIcon = ({ locale }) => {
-  if (IS_DOCKER_HOSTED) {
-    return null;
-  }
-
-  try {
-    const module = require('@novu/ee-translation-web');
-
-    return module.FlagIcon({ locale });
-  } catch (e) {}
-
-  return [];
-};
 
 const SelectContainer = styled.div`
   .mantine-Select-input {

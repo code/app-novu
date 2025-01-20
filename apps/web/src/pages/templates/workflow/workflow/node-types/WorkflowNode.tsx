@@ -18,7 +18,7 @@ import {
 import { useSegment } from '../../../../../components/providers/SegmentProvider';
 import { When } from '../../../../../components/utils/When';
 import { CONTEXT_PATH } from '../../../../../config';
-import { useEnvController, useGetPrimaryIntegration, useHasActiveIntegrations } from '../../../../../hooks';
+import { useEnvironment, useGetPrimaryIntegration, useHasActiveIntegrations } from '../../../../../hooks';
 import { CHANNEL_TYPE_TO_STRING } from '../../../../../utils/channels';
 import { useSelectPrimaryIntegrationModal } from '../../../../integrations/components/multi-provider/useSelectPrimaryIntegrationModal';
 import { IntegrationsListModal } from '../../../../integrations/IntegrationsListModal';
@@ -89,13 +89,13 @@ export function WorkflowNode({
   const segment = useSegment();
 
   const { template } = useTemplateEditorForm();
-  const { readonly: readonlyEnv, environment, chimera } = useEnvController({}, template?.chimera);
+  const { readonly: readonlyEnv, environment, bridge } = useEnvironment({ bridge: template?.bridge });
   const { cx, classes, theme } = useTemplateButtonStyles();
   const [popoverOpened, setPopoverOpened] = useState(false);
   const [disabled, setDisabled] = useState(initDisabled);
   const [isIntegrationsModalVisible, setIntegrationsModalVisible] = useState(false);
   const disabledColor = disabled ? { color: theme.colorScheme === 'dark' ? colors.B40 : colors.B70 } : {};
-  const disabledProp = disabled ? { disabled: disabled } : {};
+  const disabledProp = disabled ? { disabled } : {};
   const isStepRoot = nodeType === 'stepRoot';
   const isVariant = nodeType === 'variant';
   const isVariantRoot = nodeType === 'variantRoot';
@@ -251,12 +251,12 @@ export function WorkflowNode({
                 {label}
               </Text>
 
-              {Object.keys(stepErrorContent).length > 0 && !chimera && (
+              {Object.keys(stepErrorContent).length > 0 && !bridge && (
                 <Text {...disabledColor} size={12} color={colors.error} rows={1} data-test-id="workflow-node-error">
                   {stepErrorContent}
                 </Text>
               )}
-              {!(Object.keys(stepErrorContent).length > 0) && !chimera && subtitle && (
+              {!(Object.keys(stepErrorContent).length > 0) && !bridge && subtitle && (
                 <Text {...disabledColor} size={12} color={colors.B60} rows={1} data-test-id="workflow-node-subtitle">
                   {subtitle}
                 </Text>
@@ -301,11 +301,9 @@ export function WorkflowNode({
                 position={isVariant || isVariantRoot ? 'left' : 'right'}
                 titleIcon={<ProviderMissing />}
                 title={`${CHANNEL_TYPE_TO_STRING[channelKey]} provider is not connected`}
-                content={
-                  'Please configure or activate a provider instance for the ' +
-                  CHANNEL_TYPE_TO_STRING[channelKey] +
-                  ' channel to send notifications over this node'
-                }
+                content={`Please configure or activate a provider instance for the ${
+                  CHANNEL_TYPE_TO_STRING[channelKey]
+                } channel to send notifications over this node`}
                 actionItem={
                   <Button
                     onClick={() => {
@@ -337,12 +335,10 @@ export function WorkflowNode({
                 position={isVariant || isVariantRoot ? 'left' : 'right'}
                 titleIcon={<ProviderMissing />}
                 title="Select primary provider"
-                content={
-                  'You have multiple provider instances for ' +
-                  CHANNEL_TYPE_TO_STRING[channelKey] +
-                  ` in the ${environment?.name} environment. Please select the primary instance.
-            `
-                }
+                content={`You have multiple provider instances for ${
+                  CHANNEL_TYPE_TO_STRING[channelKey]
+                } in the ${environment?.name} environment. Please select the primary instance.
+            `}
                 actionItem={
                   <Button
                     onClick={() => {
@@ -365,7 +361,7 @@ export function WorkflowNode({
               isVariant ||
               hasActiveIntegration) &&
               stepErrorContent &&
-              !chimera && (
+              !bridge && (
                 <NodeErrorPopover
                   withinPortal
                   opened={popoverOpened && Object.keys(stepErrorContent).length > 0}
@@ -383,11 +379,9 @@ export function WorkflowNode({
                   }
                   position={isVariant || isVariantRoot ? 'left' : 'right'}
                   title={stepErrorContent || 'Something is missing here'}
-                  content={
-                    `Please specify a ${(stepErrorContent as string)
-                      .replace(/(is|are) missing!/g, '')
-                      .toLowerCase()} to prevent sending empty notifications.` || 'Something is missing here'
-                  }
+                  content={`Please specify a ${(stepErrorContent as string)
+                    .replace(/(is|are) missing!/g, '')
+                    .toLowerCase()} to prevent sending empty notifications.`}
                 />
               )}
           </>
@@ -403,7 +397,7 @@ const IconText = ({
   color,
   label,
   Icon,
-  ['data-test-id']: dataTestId,
+  'data-test-id': dataTestId,
 }: {
   color?: string;
   label: any;

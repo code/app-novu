@@ -1,5 +1,7 @@
-# This is a basic workflow to help you get started with Actions
 name: Test E2E WIDGET
+
+env:
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 on:
@@ -34,13 +36,13 @@ jobs:
             echo "has_token=false" >> $GITHUB_OUTPUT
           fi
       # checkout with submodules if token is provided
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         if: steps.setup.outputs.has_token == 'true'
         with:
           submodules: ${{ inputs.ee }}
           token: ${{ secrets.SUBMODULES_TOKEN }}
       # else checkout without submodules if the token is not provided
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         if: steps.setup.outputs.has_token != 'true'
 
       - uses: ./.github/actions/setup-project
@@ -54,14 +56,9 @@ jobs:
 
       - uses: mansagroup/nrwl-nx-action@v3
         with:
-          targets: lint
-          projects: '@novu/widget'
-
-      - uses: mansagroup/nrwl-nx-action@v3
-        with:
           targets: build
           args: --skip-nx-cache
-          projects: '@novu/widget,@novu/embed,@novu/api,@novu/worker,@novu/ws'
+          projects: '@novu/widget,@novu/embed,@novu/api-service,@novu/worker,@novu/ws'
 
       - uses: ./.github/actions/run-backend
         with:
@@ -77,9 +74,8 @@ jobs:
       - name: Start WS
         env:
           NODE_ENV: 'test'
-          TZ: 'UTC'
         run: |
-          cp apps/ws/src/.env.test apps/ws/dist/src/.env.test
+          cp apps/ws/src/.env.test apps/ws/dist/.env.test
           cd apps/ws && pnpm start:prod &
 
       - name: Wait on Widget and WS Services
@@ -105,14 +101,20 @@ jobs:
           parallel: false
           config-file: cypress.config.ts
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: cypress-screenshots
           path: apps/widget/cypress/screenshots
       # Test run video was always captured, so this action uses "always()" condition
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cypress-videos
           path: apps/widget/cypress/videos
+
+      - name: Send Slack notifications
+        uses: ./.github/actions/slack-notify-on-failure
+        if: failure()
+        with:
+          slackWebhookURL: ${{ secrets.SLACK_WEBHOOK_URL_ENG_FEED_GITHUB }}

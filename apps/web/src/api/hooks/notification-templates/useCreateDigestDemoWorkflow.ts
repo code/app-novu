@@ -1,16 +1,15 @@
 import { useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { StepTypeEnum } from '@novu/shared';
+import { StepTypeEnum, WorkflowCreationSourceEnum } from '@novu/shared';
 import type { IResponseError, ICreateNotificationTemplateDto, INotificationTemplate } from '@novu/shared';
 
+import { v4 as uuid4 } from 'uuid';
 import { createTemplate } from '../../notification-templates';
 import { parseUrl } from '../../../utils/routeUtils';
-import { ROUTES } from '../../../constants/routes.enum';
+import { ROUTES } from '../../../constants/routes';
 import { errorMessage } from '../../../utils/notifications';
 import { useNotificationGroup, useTemplates } from '../../../hooks';
-import { v4 as uuid4 } from 'uuid';
-import { TemplateCreationSourceEnum } from '../../../pages/templates/shared';
 import { FIRST_100_WORKFLOWS } from '../../../constants/workflowConstants';
 
 export const useCreateDigestDemoWorkflow = () => {
@@ -72,7 +71,7 @@ export const useCreateDigestDemoWorkflow = () => {
 
       createNotificationTemplate({
         template: payload as any,
-        params: { __source: TemplateCreationSourceEnum.ONBOARDING_DIGEST_DEMO },
+        params: { __source: WorkflowCreationSourceEnum.ONBOARDING_DIGEST_DEMO },
       });
     }
   }, [createNotificationTemplate, navigate, templatesLoading, groups, templates]);

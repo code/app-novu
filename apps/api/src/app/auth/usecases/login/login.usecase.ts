@@ -1,12 +1,12 @@
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import { UserRepository, UserEntity, OrganizationRepository } from '@novu/dal';
 import { AnalyticsService, AuthService, createHash } from '@novu/application-generic';
 
+import { normalizeEmail } from '@novu/shared';
 import { LoginCommand } from './login.command';
 import { ApiException } from '../../../shared/exceptions/api.exception';
-import { normalizeEmail } from '../../../shared/helpers/email-normalization.service';
 
 @Injectable()
 export class Login {
@@ -31,7 +31,9 @@ export class Login {
       const maxWaitTime = 110;
       const minWaitTime = 90;
       const randomWaitTime = Math.floor(Math.random() * (maxWaitTime - minWaitTime) + minWaitTime);
-      await new Promise((resolve) => setTimeout(resolve, randomWaitTime)); // will wait randomly for the chosen time to sync response time
+      await new Promise((resolve) => {
+        setTimeout(resolve, randomWaitTime);
+      }); // will wait randomly for the chosen time to sync response time
 
       throw new UnauthorizedException('Incorrect email or password provided.');
     }

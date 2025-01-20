@@ -1,5 +1,4 @@
 import { Test } from '@nestjs/testing';
-import { EvaluateApiRateLimit, EvaluateApiRateLimitCommand } from './index';
 import { UserSession } from '@novu/testing';
 import {
   ApiRateLimitAlgorithmEnum,
@@ -10,7 +9,8 @@ import {
   IApiRateLimitCost,
 } from '@novu/shared';
 import { expect } from 'chai';
-import * as sinon from 'sinon';
+import sinon from 'sinon';
+import { EvaluateApiRateLimit, EvaluateApiRateLimitCommand } from './index';
 import { GetApiRateLimitMaximum } from '../get-api-rate-limit-maximum';
 import { GetApiRateLimitAlgorithmConfig } from '../get-api-rate-limit-algorithm-config';
 import { SharedModule } from '../../../shared/shared.module';

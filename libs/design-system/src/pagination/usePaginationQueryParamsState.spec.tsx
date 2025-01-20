@@ -1,9 +1,11 @@
 import { act, waitFor } from '@testing-library/react';
 import { renderHook } from '@testing-library/react-hooks';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
+// eslint-disable-next-line import/no-namespace
 import * as ReactRouterDOM from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { PropsWithChildren } from 'react';
 import { IUsePaginationQueryParamsStateOptions, usePaginationQueryParamsState } from './usePaginationQueryParamsState';
 
 const initialPageNumber = 1;
@@ -15,7 +17,9 @@ const callHook = (options: IUsePaginationQueryParamsStateOptions, initialParams?
   const paramStr = initialParams ? `?page=${initialParams.page}&size=${initialParams.size}` : '';
 
   return renderHook(() => usePaginationQueryParamsState(options), {
-    wrapper: ({ children }) => <MemoryRouter initialEntries={[paramStr]}>{children}</MemoryRouter>,
+    wrapper: ({ children }: PropsWithChildren<{}>) => (
+      <MemoryRouter initialEntries={[paramStr]}>{children}</MemoryRouter>
+    ),
   });
 };
 

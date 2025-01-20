@@ -9,9 +9,11 @@ import {
   SubscriberEntity,
   SubscriberRepository,
 } from '@novu/dal';
-import { ChannelTypeEnum, MarkMessagesAsEnum } from '@novu/shared';
+import { ChannelTypeEnum, MessagesStatusEnum } from '@novu/shared';
+import { Novu } from '@novu/api';
+import { initNovuClassSdk } from '../../shared/helpers/e2e/sdk/e2e-sdk.helper';
 
-describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
+describe('Mark as Seen - /widgets/messages/mark-as (POST) #novu-v1', async () => {
   const messageRepository = new MessageRepository();
   const subscriberRepository = new SubscriberRepository();
   let session: UserSession;
@@ -20,12 +22,13 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
   let subscriberToken: string;
   let subscriber: SubscriberEntity;
   let message: MessageEntity;
-
+  let novuClient: Novu;
   before(async () => {
     session = new UserSession();
     await session.initialize();
     subscriberId = SubscriberRepository.createObjectId();
     template = await session.createTemplate();
+    novuClient = initNovuClassSdk(session);
 
     const { body } = await session.testAgent
       .post('/v1/widgets/session/initialize')
@@ -42,7 +45,7 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
   });
 
   beforeEach(async () => {
-    await session.triggerEvent(template.triggers[0].identifier, subscriberId);
+    await novuClient.trigger({ name: template.triggers[0].identifier, to: subscriberId });
     await session.awaitRunningJobs(template._id);
 
     message = await getMessage(session, messageRepository, subscriber);
@@ -58,7 +61,7 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
   });
 
   it('should change the seen status', async function () {
-    await markAs(subscriberToken, message._id, MarkMessagesAsEnum.SEEN);
+    await markAs(subscriberToken, message._id, MessagesStatusEnum.SEEN);
 
     const updatedMessage = await getMessage(session, messageRepository, subscriber);
 
@@ -69,7 +72,7 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
   });
 
   it('should change the read status', async function () {
-    await markAs(subscriberToken, message._id, MarkMessagesAsEnum.READ);
+    await markAs(subscriberToken, message._id, MessagesStatusEnum.READ);
 
     const updatedMessage = await getMessage(session, messageRepository, subscriber);
 
@@ -81,7 +84,7 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
 
   it('should change the seen status to unseen', async function () {
     // simulate user seen
-    await markAs(subscriberToken, message._id, MarkMessagesAsEnum.SEEN);
+    await markAs(subscriberToken, message._id, MessagesStatusEnum.SEEN);
 
     const seenMessage = await getMessage(session, messageRepository, subscriber);
     expect(seenMessage.seen).to.equal(true);
@@ -89,7 +92,7 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
     expect(seenMessage.lastSeenDate).to.be.ok;
     expect(seenMessage.lastReadDate).to.be.not.ok;
 
-    await markAs(subscriberToken, message._id, MarkMessagesAsEnum.UNSEEN);
+    await markAs(subscriberToken, message._id, MessagesStatusEnum.UNSEEN);
 
     const updatedMessage = await getMessage(session, messageRepository, subscriber);
     expect(updatedMessage.seen).to.equal(false);
@@ -100,7 +103,7 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
 
   it('should change the read status to unread', async function () {
     // simulate user read
-    await markAs(subscriberToken, message._id, MarkMessagesAsEnum.READ);
+    await markAs(subscriberToken, message._id, MessagesStatusEnum.READ);
 
     const readMessage = await getMessage(session, messageRepository, subscriber);
     expect(readMessage.seen).to.equal(true);
@@ -108,7 +111,7 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
     expect(readMessage.lastSeenDate).to.be.ok;
     expect(readMessage.lastReadDate).to.be.ok;
 
-    await markAs(subscriberToken, message._id, MarkMessagesAsEnum.UNREAD);
+    await markAs(subscriberToken, message._id, MessagesStatusEnum.UNREAD);
     const updateMessage = await getMessage(session, messageRepository, subscriber);
     expect(updateMessage.seen).to.equal(true);
     expect(updateMessage.read).to.equal(false);
@@ -120,7 +123,7 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
     const failureMessage = 'should not reach here, should throw error';
 
     try {
-      await markAs(subscriberToken, undefined, MarkMessagesAsEnum.SEEN);
+      await markAs(subscriberToken, undefined, MessagesStatusEnum.SEEN);
 
       expect.fail(failureMessage);
     } catch (e) {
@@ -133,7 +136,7 @@ describe('Mark as Seen - /widgets/messages/mark-as (POST)', async () => {
     }
 
     try {
-      await markAs(subscriberToken, [], MarkMessagesAsEnum.SEEN);
+      await markAs(subscriberToken, [], MessagesStatusEnum.SEEN);
 
       expect.fail(failureMessage);
     } catch (e) {
@@ -166,7 +169,7 @@ async function getMessage(
   return message;
 }
 
-async function markAs(subscriberToken: string, messageIds: string | string[] | undefined, mark: MarkMessagesAsEnum) {
+async function markAs(subscriberToken: string, messageIds: string | string[] | undefined, mark: MessagesStatusEnum) {
   return await axios.post(
     `http://127.0.0.1:${process.env.PORT}/v1/widgets/messages/mark-as`,
     { messageId: messageIds, markAs: mark },
@@ -185,7 +188,7 @@ async function getSubscriber(
 ): Promise<SubscriberEntity> {
   const subscriberRes = await subscriberRepository.findOne({
     _environmentId: session.environment._id,
-    subscriberId: subscriberId,
+    subscriberId,
   });
 
   if (!subscriberRes) {

@@ -8,25 +8,21 @@ import {
   Param,
   Post,
   Put,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ChannelTypeEnum, IJwtPayload, MemberRoleEnum } from '@novu/shared';
+import { ChannelTypeEnum, UserSessionData } from '@novu/shared';
 import {
   CalculateLimitNovuIntegration,
   CalculateLimitNovuIntegrationCommand,
   OtelSpan,
 } from '@novu/application-generic';
 import { ApiExcludeEndpoint, ApiOperation, ApiTags } from '@nestjs/swagger';
-
-import { UserAuthGuard } from '../auth/framework/user.auth.guard';
 import { UserSession } from '../shared/framework/user.decorator';
 import { CreateIntegration } from './usecases/create-integration/create-integration.usecase';
 import { CreateIntegrationRequestDto } from './dtos/create-integration-request.dto';
 import { CreateIntegrationCommand } from './usecases/create-integration/create-integration.command';
 import { GetIntegrations } from './usecases/get-integrations/get-integrations.usecase';
 import { GetIntegrationsCommand } from './usecases/get-integrations/get-integrations.command';
-import { Roles } from '../auth/framework/roles.decorator';
 import { UpdateIntegrationRequestDto } from './dtos/update-integration.dto';
 import { UpdateIntegration } from './usecases/update-integration/update-integration.usecase';
 import { UpdateIntegrationCommand } from './usecases/update-integration/update-integration.command';
@@ -41,19 +37,21 @@ import { GetInAppActivatedCommand } from './usecases/get-in-app-activated/get-in
 import { GetInAppActivated } from './usecases/get-in-app-activated/get-in-app-activated.usecase';
 import {
   ApiCommonResponses,
-  ApiResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiResponse,
 } from '../shared/framework/response.decorator';
 import { ChannelTypeLimitDto } from './dtos/get-channel-type-limit.sto';
 import { GetActiveIntegrationsCommand } from './usecases/get-active-integration/get-active-integration.command';
 import { SetIntegrationAsPrimary } from './usecases/set-integration-as-primary/set-integration-as-primary.usecase';
 import { SetIntegrationAsPrimaryCommand } from './usecases/set-integration-as-primary/set-integration-as-primary.command';
+import { UserAuthentication } from '../shared/framework/swagger/api.key.security';
+import { SdkGroupName, SdkMethodName } from '../shared/framework/swagger/sdk.decorators';
 
 @ApiCommonResponses()
 @Controller('/integrations')
 @UseInterceptors(ClassSerializerInterceptor)
-@UseGuards(UserAuthGuard)
+@UserAuthentication()
 @ApiTags('Integrations')
 export class IntegrationsController {
   constructor(
@@ -79,7 +77,7 @@ export class IntegrationsController {
       'Return all the integrations the user has created for that organization. Review v.0.17.0 changelog for a breaking change',
   })
   @ExternalApiAccessible()
-  async getIntegrations(@UserSession() user: IJwtPayload): Promise<IntegrationResponseDto[]> {
+  async listIntegrations(@UserSession() user: UserSessionData): Promise<IntegrationResponseDto[]> {
     return await this.getIntegrationsUsecase.execute(
       GetIntegrationsCommand.create({
         environmentId: user.environmentId,
@@ -100,7 +98,8 @@ export class IntegrationsController {
       'Return all the active integrations the user has created for that organization. Review v.0.17.0 changelog for a breaking change',
   })
   @ExternalApiAccessible()
-  async getActiveIntegrations(@UserSession() user: IJwtPayload): Promise<IntegrationResponseDto[]> {
+  @SdkMethodName('listActive')
+  async getActiveIntegrations(@UserSession() user: UserSessionData): Promise<IntegrationResponseDto[]> {
     return await this.getActiveIntegrationsUsecase.execute(
       GetActiveIntegrationsCommand.create({
         environmentId: user.environmentId,
@@ -120,9 +119,10 @@ export class IntegrationsController {
     description:
       'Return the status of the webhook for this provider, if it is supported or if it is not based on a boolean value',
   })
+  @SdkGroupName('Integrations.Webhooks')
   @ExternalApiAccessible()
   async getWebhookSupportStatus(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('providerOrIntegrationId') providerOrIntegrationId: string
   ): Promise<boolean> {
     return await this.getWebhookSupportStatusUsecase.execute(
@@ -143,7 +143,7 @@ export class IntegrationsController {
   })
   @ExternalApiAccessible()
   async createIntegration(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Body() body: CreateIntegrationRequestDto
   ): Promise<IntegrationResponseDto> {
     try {
@@ -158,7 +158,7 @@ export class IntegrationsController {
           channel: body.channel,
           credentials: body.credentials,
           active: body.active ?? false,
-          check: body.check ?? true,
+          check: body.check ?? false,
           conditions: body.conditions,
         })
       );
@@ -172,7 +172,6 @@ export class IntegrationsController {
   }
 
   @Put('/:integrationId')
-  @Roles(MemberRoleEnum.ADMIN)
   @ApiResponse(IntegrationResponseDto)
   @ApiNotFoundResponse({
     description: 'The integration with the integrationId provided does not exist in the database.',
@@ -182,7 +181,7 @@ export class IntegrationsController {
   })
   @ExternalApiAccessible()
   async updateIntegrationById(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('integrationId') integrationId: string,
     @Body() body: UpdateIntegrationRequestDto
   ): Promise<IntegrationResponseDto> {
@@ -197,8 +196,9 @@ export class IntegrationsController {
           organizationId: user.organizationId,
           integrationId,
           credentials: body.credentials,
+          removeNovuBranding: body.removeNovuBranding,
           active: body.active,
-          check: body.check ?? true,
+          check: body.check ?? false,
           conditions: body.conditions,
         })
       );
@@ -212,7 +212,6 @@ export class IntegrationsController {
   }
 
   @Post('/:integrationId/set-primary')
-  @Roles(MemberRoleEnum.ADMIN)
   @ApiResponse(IntegrationResponseDto)
   @ApiNotFoundResponse({
     description: 'The integration with the integrationId provided does not exist in the database.',
@@ -221,8 +220,9 @@ export class IntegrationsController {
     summary: 'Set integration as primary',
   })
   @ExternalApiAccessible()
+  @SdkMethodName('setAsPrimary')
   setIntegrationAsPrimary(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('integrationId') integrationId: string
   ): Promise<IntegrationResponseDto> {
     return this.setIntegrationAsPrimaryUsecase.execute(
@@ -242,7 +242,7 @@ export class IntegrationsController {
   })
   @ExternalApiAccessible()
   async removeIntegration(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('integrationId') integrationId: string
   ): Promise<IntegrationResponseDto[]> {
     return await this.removeIntegrationUsecase.execute(
@@ -259,7 +259,7 @@ export class IntegrationsController {
   @ApiExcludeEndpoint()
   @OtelSpan()
   async getProviderLimit(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('channelType') channelType: ChannelTypeEnum
   ): Promise<ChannelTypeLimitDto> {
     const result = await this.calculateLimitNovuIntegration.execute(
@@ -279,7 +279,7 @@ export class IntegrationsController {
 
   @Get('/in-app/status')
   @ApiExcludeEndpoint()
-  async getInAppActivated(@UserSession() user: IJwtPayload) {
+  async getInAppActivated(@UserSession() user: UserSessionData) {
     return await this.getInAppActivatedUsecase.execute(
       GetInAppActivatedCommand.create({
         organizationId: user.organizationId,

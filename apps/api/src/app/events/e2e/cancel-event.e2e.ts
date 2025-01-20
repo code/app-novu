@@ -1,43 +1,43 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import axios from 'axios';
 import { expect } from 'chai';
 import {
+  JobRepository,
+  JobStatusEnum,
   MessageRepository,
   NotificationTemplateEntity,
   SubscriberEntity,
-  JobRepository,
-  JobStatusEnum,
 } from '@novu/dal';
-import { StepTypeEnum, DigestTypeEnum, DigestUnitEnum, DelayTypeEnum } from '@novu/shared';
-import { UserSession, SubscribersService } from '@novu/testing';
+import { DelayTypeEnum, DigestTypeEnum, DigestUnitEnum, StepTypeEnum } from '@novu/shared';
+import { SubscribersService, UserSession } from '@novu/testing';
+import { Novu } from '@novu/api';
+import { initNovuClassSdk } from '../../shared/helpers/e2e/sdk/e2e-sdk.helper';
 
 const axiosInstance = axios.create();
 
-describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function () {
+describe('Cancel event - /v1/events/trigger/:transactionId (DELETE) #novu-v2', function () {
   let session: UserSession;
   let template: NotificationTemplateEntity;
   let subscriber: SubscriberEntity;
   let subscriberService: SubscribersService;
   const jobRepository = new JobRepository();
+  let novuClient: Novu;
 
+  async function cancelEvent(transactionId: string | undefined) {
+    if (!transactionId) {
+      throw new Error('Missing transactionId');
+    }
+    await novuClient.cancel(transactionId);
+  }
   const triggerEvent = async (payload, transactionId?: string, overrides = {}, to = [subscriber.subscriberId]) => {
     return (
-      await axiosInstance.post(
-        `${session.serverUrl}/v1/events/trigger`,
-        {
-          transactionId,
-          name: template.triggers[0].identifier,
-          to,
-          payload,
-          overrides,
-        },
-        {
-          headers: {
-            authorization: `ApiKey ${session.apiKey}`,
-          },
-        }
-      )
-    ).data.data;
+      await novuClient.trigger({
+        transactionId,
+        name: template.triggers[0].identifier,
+        to,
+        payload,
+        overrides,
+      })
+    ).result;
   };
 
   beforeEach(async () => {
@@ -46,6 +46,7 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
     template = await session.createTemplate();
     subscriberService = new SubscribersService(session.organization._id, session.environment._id);
     subscriber = await subscriberService.createSubscriber();
+    novuClient = initNovuClassSdk(session);
   });
 
   it('should be able to cancel digest', async function () {
@@ -205,7 +206,9 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
     const trigger1 = await triggerEvent({
       customVar: 'trigger_1_data',
     });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
     const trigger2 = await triggerEvent({
       customVar: 'trigger_2_data',
     });
@@ -217,7 +220,7 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
       customVar: 'trigger_3_data',
     });
 
-    await session.testAgent.delete(`/v1/events/trigger/${trigger2.transactionId}`).send({});
+    cancelEvent(trigger2.transactionId);
 
     await session.awaitRunningJobs(template?._id, false, 0);
 
@@ -288,14 +291,16 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
     const trigger1 = await triggerEvent({
       customVar: 'trigger_1_data',
     });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
     const trigger2 = await triggerEvent({
       customVar: 'trigger_2_data',
     });
 
     // Wait for trigger2 to be merged to trigger1
     await session.awaitRunningJobs(template?._id, false, 1);
-    await session.testAgent.delete(`/v1/events/trigger/${trigger1.transactionId}`).send({});
+    cancelEvent(trigger1.transactionId);
 
     const trigger3 = await triggerEvent({
       customVar: 'trigger_3_data',
@@ -380,7 +385,9 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
     const trigger1 = await triggerEvent({
       customVar: 'trigger_1_data',
     });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
     const trigger2 = await triggerEvent({
       customVar: 'trigger_2_data',
     });
@@ -388,7 +395,7 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
     // Wait for trigger2 to be merged to trigger1
     const mainDigest = trigger1.transactionId;
     await session.awaitRunningJobs(template?._id, false, 1);
-    await session.testAgent.delete(`/v1/events/trigger/${mainDigest}`).send({});
+    cancelEvent(mainDigest);
 
     const trigger3 = await triggerEvent({
       customVar: 'trigger_3_data',
@@ -397,7 +404,7 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
     // Wait for trigger3 to be merged to trigger2
     const followerDigest = trigger2.transactionId;
     await session.awaitRunningJobs(template?._id, false, 1);
-    await session.testAgent.delete(`/v1/events/trigger/${followerDigest}`).send({});
+    cancelEvent(followerDigest);
 
     const trigger4 = await triggerEvent({
       customVar: 'trigger_4_data',
@@ -486,7 +493,9 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
     const trigger1 = await triggerEvent({
       customVar: 'trigger_1_data',
     });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
     const trigger2 = await triggerEvent({
       customVar: 'trigger_2_data',
     });
@@ -494,7 +503,7 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
     // Wait for trigger2 to be merged to trigger1
     const mainDigest = trigger1.transactionId;
     await session.awaitRunningJobs(template?._id, false, 1);
-    await session.testAgent.delete(`/v1/events/trigger/${mainDigest}`).send({});
+    cancelEvent(mainDigest);
 
     const trigger3 = await triggerEvent({
       customVar: 'trigger_3_data',
@@ -503,7 +512,7 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
     // Wait for trigger3 to be merged to trigger2
     const followerDigest = trigger2.transactionId;
     await session.awaitRunningJobs(template?._id, false, 1);
-    await session.testAgent.delete(`/v1/events/trigger/${followerDigest}`).send({});
+    cancelEvent(followerDigest);
 
     const trigger4 = await triggerEvent({
       customVar: 'trigger_4_data',
@@ -511,7 +520,7 @@ describe('Cancel event - /v1/events/trigger/:transactionId (DELETE)', function (
 
     // Wait for trigger4 to be merged to trigger3
     await session.awaitRunningJobs(template?._id, false, 1);
-    await session.testAgent.delete(`/v1/events/trigger/${trigger4.transactionId}`).send({});
+    cancelEvent(trigger4.transactionId);
 
     await session.awaitRunningJobs(template?._id, false, 0);
 

@@ -1,6 +1,5 @@
 import { Alert, Group, Modal, useMantineTheme } from '@mantine/core';
-import { WarningOutlined } from '@ant-design/icons';
-import { Button, colors, shadows, Title, Text } from '@novu/design-system';
+import { Button, colors, shadows, Title, Text, IconOutlineWarning } from '@novu/design-system';
 
 export function DeleteConfirmModal({
   target,
@@ -26,7 +25,7 @@ export function DeleteConfirmModal({
   cancelButtonText?: string;
 }) {
   const theme = useMantineTheme();
-  const targetText = target ? ' ' + target : '';
+  const targetText = target ? ` ${target}` : '';
 
   return (
     <>
@@ -48,7 +47,7 @@ export function DeleteConfirmModal({
             paddingTop: '180px',
           },
         }}
-        title={<Title size={2}>{title ? title : `Delete${targetText}`}</Title>}
+        title={<Title size={2}>{title || `Delete${targetText}`}</Title>}
         sx={{ backdropFilter: 'blur(10px)' }}
         shadow={theme.colorScheme === 'dark' ? shadows.dark : shadows.medium}
         radius="md"
@@ -60,7 +59,7 @@ export function DeleteConfirmModal({
         <div>
           {error && (
             <Alert
-              icon={<WarningOutlined size={16} />}
+              icon={<IconOutlineWarning size={'16'} />}
               title="An error occurred!"
               color={`linear-gradient(0deg, ${colors.B17} 0%, ${colors.B17} 100%)`}
               mb={32}
@@ -68,7 +67,7 @@ export function DeleteConfirmModal({
               {error}
             </Alert>
           )}
-          <Text>{description ? description : `Would you like to delete this${targetText}?`}</Text>
+          <Text>{description || `Would you like to delete this${targetText}?`}</Text>
           <Group position="right">
             <Button variant="outline" size="md" mt={30} onClick={() => cancel()}>
               {cancelButtonText}

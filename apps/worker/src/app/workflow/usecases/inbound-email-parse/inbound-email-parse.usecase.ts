@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { InboundEmailParseCommand } from './inbound-email-parse.command';
 import {
   JobEntity,
   JobRepository,
@@ -10,6 +9,8 @@ import {
 } from '@novu/dal';
 import axios from 'axios';
 import { CompileTemplate, CompileTemplateCommand, createHash } from '@novu/application-generic';
+import { StepTypeEnum } from '@novu/shared';
+import { InboundEmailParseCommand } from './inbound-email-parse.command';
 
 const LOG_CONTEXT = 'InboundEmailParse';
 
@@ -24,7 +25,7 @@ export class InboundEmailParse {
   async execute(command: InboundEmailParseCommand) {
     const { domain, transactionId, environmentId } = this.splitTo(command.to[0].address);
 
-    Logger.debug({ domain, transactionId, environmentId }, `Received new email to parse`, LOG_CONTEXT);
+    Logger.log({ domain, transactionId, environmentId }, `Received new email to parse`, LOG_CONTEXT);
 
     const { template, notification, subscriber, environment, job, message } = await this.getEntities(
       transactionId,
@@ -44,16 +45,14 @@ export class InboundEmailParse {
       );
     }
 
-    const compiledDomain = await this.compileTemplate.execute(
-      CompileTemplateCommand.create({
-        template: currentParseWebhook as string,
-        data: job.payload,
-      })
-    );
+    const compiledDomain = await this.compileTemplate.execute({
+      template: currentParseWebhook as string,
+      data: job.payload,
+    });
 
     const userPayload: IUserWebhookPayload = {
       hmac: createHash(environment?.apiKeys[0]?.key, subscriber.subscriberId),
-      transactionId: transactionId,
+      transactionId,
       payload: job.payload,
       templateIdentifier: job.identifier,
       template,
@@ -94,7 +93,7 @@ export class InboundEmailParse {
   }
 
   private async getEntities(transactionId: string, environmentId: string) {
-    const partial: Partial<JobEntity> = { transactionId, _environmentId: environmentId };
+    const partial: Partial<JobEntity> = { transactionId, _environmentId: environmentId, type: StepTypeEnum.EMAIL };
 
     const { template, notification, subscriber, environment, ...job } = await this.jobRepository.findOnePopulate({
       query: partial as JobEntity,

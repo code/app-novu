@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { IUserEntity } from '@novu/shared';
 
 import { updateUserOnBoarding } from '../user';
-import { useAuthContext } from '@novu/shared-web';
+import { useAuth } from '../../hooks/useAuth';
 
 interface IErrorResponseType {
   error: string;
@@ -16,7 +16,7 @@ interface IRequestPayload {
 }
 
 export const useUserOnboardingStatus = () => {
-  const { currentUser, isUserLoading } = useAuthContext();
+  const { currentUser, isUserLoaded } = useAuth();
   const queryClient = useQueryClient();
 
   const mutationFunction = ({ showOnboarding }) => updateUserOnBoarding(showOnboarding);
@@ -34,7 +34,7 @@ export const useUserOnboardingStatus = () => {
 
   return {
     updateOnboardingStatus: updateOnBoardingStatus,
-    isLoading: isUserLoading || isLoadingUpdate,
+    isLoading: !isUserLoaded || isLoadingUpdate,
     showOnboarding: shouldShowOnboarding(currentUser?.showOnBoarding),
   };
 };

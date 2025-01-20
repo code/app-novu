@@ -26,7 +26,7 @@ export interface ISubscribers {
     subscriberId: string,
     providerId: string,
     credentials: IChannelCredentials,
-    integrationIdentifier?: string
+    integrationIdentifier?: string,
   );
   deleteCredentials(subscriberId: string, providerId: string);
   /**
@@ -34,21 +34,24 @@ export interface ISubscribers {
    */
   unsetCredentials(subscriberId: string, providerId: string);
   updateOnlineStatus(subscriberId: string, online: boolean);
-  getPreference(subscriberId: string);
+  getPreference(
+    subscriberId: string,
+    { includeInactiveChannels }: { includeInactiveChannels: boolean },
+  );
   getGlobalPreference(subscriberId: string);
   getPreferenceByLevel(subscriberId: string, level: PreferenceLevelEnum);
   updatePreference(
     subscriberId: string,
     templateId: string,
-    data: IUpdateSubscriberPreferencePayload
+    data: IUpdateSubscriberPreferencePayload,
   );
   updateGlobalPreference(
     subscriberId: string,
-    data: IUpdateSubscriberGlobalPreferencePayload
+    data: IUpdateSubscriberGlobalPreferencePayload,
   );
   getNotificationsFeed(
     subscriberId: string,
-    params: IGetSubscriberNotificationFeedParams
+    params: IGetSubscriberNotificationFeedParams,
   );
   getUnseenCount(subscriberId: string, seen: boolean);
   /**
@@ -64,7 +67,7 @@ export interface ISubscribers {
     subscriberId: string,
     messageId: string,
     type: string,
-    data: IMarkMessageActionFields
+    data: IMarkMessageActionFields,
   );
 }
 

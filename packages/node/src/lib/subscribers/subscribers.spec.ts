@@ -1,11 +1,11 @@
-import { Novu } from '../novu';
 import axios from 'axios';
 import {
   ChannelTypeEnum,
   MessageActionStatusEnum,
   ButtonTypeEnum,
-  MarkMessagesAsEnum,
+  MessagesStatusEnum,
 } from '@novu/shared';
+import { Novu } from '../novu';
 
 const mockConfig = {
   apiKey: '1234',
@@ -46,7 +46,7 @@ describe('test use of novus node package - Subscribers class', () => {
         phone: '8989898',
         locale: 'en',
         data: { custom1: 'custom value1', custom2: 'custom value2' },
-      }
+      },
     );
   });
 
@@ -57,7 +57,7 @@ describe('test use of novus node package - Subscribers class', () => {
 
     expect(mockedAxios.delete).toHaveBeenCalled();
     expect(mockedAxios.delete).toHaveBeenCalledWith(
-      `/subscribers/test-delete-subscriber`
+      `/subscribers/test-delete-subscriber`,
     );
   });
 
@@ -68,7 +68,7 @@ describe('test use of novus node package - Subscribers class', () => {
 
     expect(mockedAxios.delete).toHaveBeenCalled();
     expect(mockedAxios.delete).toHaveBeenCalledWith(
-      `/subscribers/test-update-subscriber/credentials/slack`
+      `/subscribers/test-update-subscriber/credentials/slack`,
     );
   });
 
@@ -86,7 +86,7 @@ describe('test use of novus node package - Subscribers class', () => {
           webhookUrl: undefined,
           deviceTokens: [],
         },
-      }
+      },
     );
   });
 
@@ -161,7 +161,7 @@ describe('test use of novus node package - Subscribers class', () => {
     await novu.subscribers.setCredentials(
       'test-update-subscriber',
       'slack',
-      credentials
+      credentials,
     );
 
     expect(mockedAxios.put).toHaveBeenCalled();
@@ -172,7 +172,7 @@ describe('test use of novus node package - Subscribers class', () => {
         credentials: {
           webhookUrl: 'webhookUrl',
         },
-      }
+      },
     );
   });
 
@@ -186,7 +186,7 @@ describe('test use of novus node package - Subscribers class', () => {
       `/subscribers/test-update-subscriber/online-status`,
       {
         online: true,
-      }
+      },
     );
   });
 
@@ -195,9 +195,27 @@ describe('test use of novus node package - Subscribers class', () => {
 
     await novu.subscribers.getPreference('test-subscriber-preference');
 
-    expect(mockedAxios.get).toHaveBeenCalled();
-    expect(mockedAxios.get).toHaveBeenCalledWith(
-      '/subscribers/test-subscriber-preference/preferences'
+    expect(mockedAxios.get).toHaveBeenNthCalledWith(
+      1,
+      '/subscribers/test-subscriber-preference/preferences',
+    );
+
+    await novu.subscribers.getPreference('test-subscriber-preference', {
+      includeInactiveChannels: true,
+    });
+
+    expect(mockedAxios.get).toHaveBeenNthCalledWith(
+      2,
+      '/subscribers/test-subscriber-preference/preferences?includeInactiveChannels=true',
+    );
+
+    await novu.subscribers.getPreference('test-subscriber-preference', {
+      includeInactiveChannels: false,
+    });
+
+    expect(mockedAxios.get).toHaveBeenNthCalledWith(
+      3,
+      '/subscribers/test-subscriber-preference/preferences?includeInactiveChannels=false',
     );
   });
 
@@ -215,13 +233,13 @@ describe('test use of novus node package - Subscribers class', () => {
     await novu.subscribers.updatePreference(
       'test-preference-subscriber',
       'template-123',
-      preferencePayload
+      preferencePayload,
     );
 
     expect(mockedAxios.patch).toHaveBeenCalled();
     expect(mockedAxios.patch).toHaveBeenCalledWith(
       '/subscribers/test-preference-subscriber/preferences/template-123',
-      preferencePayload
+      preferencePayload,
     );
   });
 
@@ -230,13 +248,13 @@ describe('test use of novus node package - Subscribers class', () => {
 
     await novu.subscribers.getNotificationsFeed(
       'test-news-feed-subscriber',
-      {}
+      {},
     );
 
     expect(mockedAxios.get).toHaveBeenCalled();
     expect(mockedAxios.get).toHaveBeenCalledWith(
       '/subscribers/test-news-feed-subscriber/notifications/feed',
-      { params: {} }
+      { params: {} },
     );
   });
 
@@ -254,7 +272,7 @@ describe('test use of novus node package - Subscribers class', () => {
         params: {
           feedIdentifier: '123',
         },
-      }
+      },
     );
   });
 
@@ -270,7 +288,7 @@ describe('test use of novus node package - Subscribers class', () => {
         params: {
           seen: false,
         },
-      }
+      },
     );
   });
 
@@ -282,7 +300,7 @@ describe('test use of novus node package - Subscribers class', () => {
     expect(mockedAxios.post).toHaveBeenCalled();
     expect(mockedAxios.post).toHaveBeenCalledWith(
       '/subscribers/test-message-seen/messages/markAs',
-      { mark: { seen: true }, messageId: 'message-123' }
+      { mark: { seen: true }, messageId: 'message-123' },
     );
   });
 
@@ -294,7 +312,7 @@ describe('test use of novus node package - Subscribers class', () => {
     expect(mockedAxios.post).toHaveBeenCalled();
     expect(mockedAxios.post).toHaveBeenCalledWith(
       '/subscribers/test-message-read/messages/markAs',
-      { mark: { read: true }, messageId: 'message-123' }
+      { mark: { read: true }, messageId: 'message-123' },
     );
   });
 
@@ -305,13 +323,13 @@ describe('test use of novus node package - Subscribers class', () => {
       'test-action-type-sub',
       'message-123',
       ButtonTypeEnum.PRIMARY,
-      { status: MessageActionStatusEnum.DONE }
+      { status: MessageActionStatusEnum.DONE },
     );
 
     expect(mockedAxios.post).toHaveBeenCalled();
     expect(mockedAxios.post).toHaveBeenCalledWith(
       '/subscribers/test-action-type-sub/messages/message-123/actions/primary',
-      { status: 'done' }
+      { status: 'done' },
     );
   });
 
@@ -320,15 +338,15 @@ describe('test use of novus node package - Subscribers class', () => {
 
     await novu.subscribers.markAllMessagesAs(
       'test-action-type-sub',
-      MarkMessagesAsEnum.READ
+      MessagesStatusEnum.READ,
     );
 
     expect(mockedAxios.post).toHaveBeenCalled();
     expect(mockedAxios.post).toHaveBeenCalledWith(
       '/subscribers/test-action-type-sub/messages/mark-all',
       {
-        markAs: MarkMessagesAsEnum.READ,
-      }
+        markAs: MessagesStatusEnum.READ,
+      },
     );
   });
 
@@ -337,17 +355,17 @@ describe('test use of novus node package - Subscribers class', () => {
 
     await novu.subscribers.markAllMessagesAs(
       'test-action-type-sub',
-      MarkMessagesAsEnum.READ,
-      'feed-123'
+      MessagesStatusEnum.READ,
+      'feed-123',
     );
 
     expect(mockedAxios.post).toHaveBeenCalled();
     expect(mockedAxios.post).toHaveBeenCalledWith(
       '/subscribers/test-action-type-sub/messages/mark-all',
       {
-        markAs: MarkMessagesAsEnum.READ,
+        markAs: MessagesStatusEnum.READ,
         feedIdentifier: 'feed-123',
-      }
+      },
     );
   });
 });

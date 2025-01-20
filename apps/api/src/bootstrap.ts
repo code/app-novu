@@ -1,41 +1,30 @@
-import { CONTEXT_PATH } from './config';
-import 'newrelic';
-import '@sentry/tracing';
+import './instrument';
 
 import helmet from 'helmet';
-import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
-import * as passport from 'passport';
-import * as compression from 'compression';
+import { INestApplication, Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
-import * as bodyParser from 'body-parser';
-import * as Sentry from '@sentry/node';
+import bodyParser from 'body-parser';
+
 import { BullMqService, getErrorInterceptor, Logger as PinoLogger } from '@novu/application-generic';
 import { ExpressAdapter } from '@nestjs/platform-express';
-
+import { CONTEXT_PATH, corsOptionsDelegate, validateEnv } from './config';
 import { AppModule } from './app.module';
-import { ResponseInterceptor } from './app/shared/framework/response.interceptor';
-import { RolesGuard } from './app/auth/framework/roles.guard';
-import { SubscriberRouteGuard } from './app/auth/framework/subscriber-route.guard';
-import { validateEnv } from './config/env-validator';
-
-import * as packageJson from '../package.json';
 import { setupSwagger } from './app/shared/framework/swagger/swagger.controller';
-import { corsOptionsDelegate } from './config/cors';
+import { SubscriberRouteGuard } from './app/auth/framework/subscriber-route.guard';
+import { ResponseInterceptor } from './app/shared/framework/response.interceptor';
+import { AllExceptionsFilter } from './exception-filter';
 
-const extendedBodySizeRoutes = ['/v1/events', '/v1/notification-templates', '/v1/workflows', '/v1/layouts'];
+const passport = require('passport');
+const compression = require('compression');
 
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV,
-    release: `v${packageJson.version}`,
-    ignoreErrors: ['Non-Error exception captured'],
-    integrations: [
-      // enable HTTP calls tracing
-      new Sentry.Integrations.Http({ tracing: true }),
-    ],
-  });
-}
+const extendedBodySizeRoutes = [
+  '/v1/events',
+  '/v1/notification-templates',
+  '/v1/workflows',
+  '/v1/layouts',
+  '/v1/bridge/sync',
+  '/v1/bridge/diff',
+];
 
 // Validate the ENV variables after launching SENTRY, so missing variables will report to sentry
 validateEnv();
@@ -43,22 +32,20 @@ validateEnv();
 export async function bootstrap(expressApp?): Promise<INestApplication> {
   BullMqService.haveProInstalled();
 
-  let rawBodyBuffer: undefined | (() => void) = undefined;
+  let rawBodyBuffer: undefined | ((...args) => void);
   let nestOptions: Record<string, boolean> = {};
 
-  try {
-    if (
-      (process.env.NOVU_ENTERPRISE === 'true' && require('@novu/ee-billing')?.rawBodyBuffer) ||
-      process.env.CI_EE_TEST === 'true'
-    ) {
-      rawBodyBuffer = require('@novu/ee-billing')?.rawBodyBuffer;
-      nestOptions = {
-        bodyParser: false,
-        rawBody: true,
-      };
-    }
-  } catch (e) {
-    Logger.error(e, `Unexpected error while importing enterprise modules`, 'EnterpriseImport');
+  if (process.env.NOVU_ENTERPRISE === 'true' || process.env.CI_EE_TEST === 'true') {
+    rawBodyBuffer = (req, res, buffer, encoding): void => {
+      if (buffer && buffer.length) {
+        // eslint-disable-next-line no-param-reassign
+        req.rawBody = Buffer.from(buffer);
+      }
+    };
+    nestOptions = {
+      bodyParser: false,
+      rawBody: true,
+    };
   }
 
   let app: INestApplication;
@@ -67,6 +54,12 @@ export async function bootstrap(expressApp?): Promise<INestApplication> {
   } else {
     app = await NestFactory.create(AppModule, { bufferLogs: true, ...nestOptions });
   }
+
+  app.enableVersioning({
+    type: VersioningType.URI,
+    prefix: `${CONTEXT_PATH}v`,
+    defaultVersion: '1',
+  });
 
   app.useLogger(app.get(PinoLogger));
   app.flushLogs();
@@ -78,15 +71,8 @@ export async function bootstrap(expressApp?): Promise<INestApplication> {
   server.headersTimeout = 65 * 1000;
   Logger.verbose(`Server headersTimeout: ${server.headersTimeout / 1000}s `);
 
-  if (process.env.SENTRY_DSN) {
-    app.use(Sentry.Handlers.requestHandler());
-    app.use(Sentry.Handlers.tracingHandler());
-  }
-
   app.use(helmet());
   app.enableCors(corsOptionsDelegate);
-
-  app.setGlobalPrefix(CONTEXT_PATH + 'v1');
 
   app.use(passport.initialize());
 
@@ -100,8 +86,7 @@ export async function bootstrap(expressApp?): Promise<INestApplication> {
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalInterceptors(getErrorInterceptor());
 
-  app.useGlobalGuards(new RolesGuard(app.get(Reflector)));
-  app.useGlobalGuards(new SubscriberRouteGuard(app.get(Reflector)));
+  app.useGlobalGuards(new SubscriberRouteGuard(app.get(Reflector), app.get(PinoLogger)));
 
   app.use(extendedBodySizeRoutes, bodyParser.json({ limit: '20mb' }));
   app.use(extendedBodySizeRoutes, bodyParser.urlencoded({ limit: '20mb', extended: true }));
@@ -111,9 +96,9 @@ export async function bootstrap(expressApp?): Promise<INestApplication> {
 
   app.use(compression());
 
-  setupSwagger(app);
+  await setupSwagger(app);
 
-  Logger.log('BOOTSTRAPPED SUCCESSFULLY');
+  app.useGlobalFilters(new AllExceptionsFilter(app.get(PinoLogger)));
 
   if (expressApp) {
     await app.init();

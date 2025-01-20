@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { faker } from '@faker-js/faker';
 
 import { AuthService } from '@novu/application-generic';
 
@@ -8,16 +7,20 @@ import { UserRegister } from '../../../auth/usecases/register/user-register.usec
 import { UserRegisterCommand } from '../../../auth/usecases/register/user-register.command';
 import { ApiException } from '../../../shared/exceptions/api.exception';
 
+// TODO: this causes exit code 1 in ee e2e tests (?)
 @Injectable()
 export class SeedData {
-  constructor(private authService: AuthService, private userRegister: UserRegister) {}
+  constructor(
+    private authService: AuthService,
+    private userRegister: UserRegister
+  ) {}
 
   async execute(command: SeedDataCommand) {
     const data = {
       email: 'test-user-1@example.com',
-      firstName: faker.name.firstName(),
-      lastName: faker.name.lastName(),
-      password: '123qwe!@#',
+      firstName: `John-${new Date().toISOString()}`,
+      lastName: `Doe-${new Date().toISOString()}`,
+      password: 'asd#Faf4fd',
       organizationName: 'Test Organization',
     };
 

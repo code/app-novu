@@ -1,7 +1,8 @@
-import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
+/* eslint-disable global-require */
+import { Body, Controller, Logger, Post } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { format } from 'date-fns';
-import * as i18next from 'i18next';
+import i18next from 'i18next';
 import { ModuleRef } from '@nestjs/core';
 import {
   ApiException,
@@ -11,13 +12,13 @@ import {
   CompileInAppTemplateCommand,
   CompileStepTemplate,
   CompileStepTemplateCommand,
-  UserAuthGuard,
 } from '@novu/application-generic';
-import { IEmailBlock, IJwtPayload, MessageTemplateContentType, IMessageCTA } from '@novu/shared';
+import { IEmailBlock, IMessageCTA, MessageTemplateContentType, UserSessionData } from '@novu/shared';
 import { UserSession } from '../shared/framework/user.decorator';
+import { UserAuthentication } from '../shared/framework/swagger/api.key.security';
 
 @Controller('/content-templates')
-@UseGuards(UserAuthGuard)
+@UserAuthentication()
 @ApiExcludeController()
 export class ContentTemplatesController {
   constructor(
@@ -28,8 +29,8 @@ export class ContentTemplatesController {
   ) {}
 
   @Post('/preview/email')
-  public previewEmail(
-    @UserSession() user: IJwtPayload,
+  public async previewEmail(
+    @UserSession() user: UserSessionData,
     @Body('content') content: string | IEmailBlock[],
     @Body('contentType') contentType: MessageTemplateContentType,
     @Body('payload') payload: any,
@@ -37,6 +38,8 @@ export class ContentTemplatesController {
     @Body('layoutId') layoutId: string,
     @Body('locale') locale?: string
   ) {
+    const i18nInstance = await this.initiateTranslations(user.environmentId, user.organizationId, locale);
+
     return this.compileEmailTemplateUsecase.execute(
       CompileEmailTemplateCommand.create({
         userId: user._id,
@@ -49,18 +52,20 @@ export class ContentTemplatesController {
         layoutId,
         locale,
       }),
-      this.initiateTranslations.bind(this)
+      i18nInstance
     );
   }
 
   @Post('/preview/in-app')
-  public previewInApp(
-    @UserSession() user: IJwtPayload,
+  public async previewInApp(
+    @UserSession() user: UserSessionData,
     @Body('content') content: string,
     @Body('payload') payload: any,
     @Body('cta') cta: IMessageCTA,
     @Body('locale') locale?: string
   ) {
+    const i18nInstance = await this.initiateTranslations(user.environmentId, user.organizationId, locale);
+
     return this.compileInAppTemplate.execute(
       CompileInAppTemplateCommand.create({
         userId: user._id,
@@ -71,17 +76,19 @@ export class ContentTemplatesController {
         cta,
         locale,
       }),
-      this.initiateTranslations.bind(this)
+      i18nInstance
     );
   }
   // TODO: refactor this to use params and single endpoint to manage all the channels
   @Post('/preview/sms')
-  public previewSms(
-    @UserSession() user: IJwtPayload,
+  public async previewSms(
+    @UserSession() user: UserSessionData,
     @Body('content') content: string,
     @Body('payload') payload: any,
     @Body('locale') locale?: string
   ) {
+    const i18nInstance = await this.initiateTranslations(user.environmentId, user.organizationId, locale);
+
     return this.compileStepTemplate.execute(
       CompileStepTemplateCommand.create({
         userId: user._id,
@@ -91,17 +98,19 @@ export class ContentTemplatesController {
         payload,
         locale,
       }),
-      this.initiateTranslations.bind(this)
+      i18nInstance
     );
   }
 
   @Post('/preview/chat')
-  public previewChat(
-    @UserSession() user: IJwtPayload,
+  public async previewChat(
+    @UserSession() user: UserSessionData,
     @Body('content') content: string,
     @Body('payload') payload: any,
     @Body('locale') locale?: string
   ) {
+    const i18nInstance = await this.initiateTranslations(user.environmentId, user.organizationId, locale);
+
     return this.compileStepTemplate.execute(
       CompileStepTemplateCommand.create({
         userId: user._id,
@@ -111,18 +120,20 @@ export class ContentTemplatesController {
         payload,
         locale,
       }),
-      this.initiateTranslations.bind(this)
+      i18nInstance
     );
   }
 
   @Post('/preview/push')
-  public previewPush(
-    @UserSession() user: IJwtPayload,
+  public async previewPush(
+    @UserSession() user: UserSessionData,
     @Body('content') content: string,
     @Body('title') title: string,
     @Body('payload') payload: any,
     @Body('locale') locale?: string
   ) {
+    const i18nInstance = await this.initiateTranslations(user.environmentId, user.organizationId, locale);
+
     return this.compileStepTemplate.execute(
       CompileStepTemplateCommand.create({
         userId: user._id,
@@ -133,7 +144,7 @@ export class ContentTemplatesController {
         locale,
         title,
       }),
-      this.initiateTranslations.bind(this)
+      i18nInstance
     );
   }
 
@@ -148,8 +159,8 @@ export class ContentTemplatesController {
           environmentId,
           organizationId
         );
-
-        await i18next.init({
+        const instance = i18next.createInstance();
+        await instance.init({
           resources,
           ns: namespaces,
           defaultNS: false,
@@ -159,8 +170,8 @@ export class ContentTemplatesController {
           fallbackLng: defaultLocale,
           interpolation: {
             formatSeparator: ',',
-            format: function (value, formatting, lng) {
-              if (value && formatting && !isNaN(Date.parse(value))) {
+            format(value, formatting, lng) {
+              if (value && formatting && !Number.isNaN(Date.parse(value))) {
                 return format(new Date(value), formatting);
               }
 
@@ -168,6 +179,8 @@ export class ContentTemplatesController {
             },
           },
         });
+
+        return instance;
       }
     } catch (e) {
       Logger.error(e, `Unexpected error while importing enterprise modules`, 'TranslationsService');

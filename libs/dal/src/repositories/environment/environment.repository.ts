@@ -35,6 +35,13 @@ export class EnvironmentRepository extends BaseRepository<EnvironmentDBModel, En
     });
   }
 
+  async findByIdAndOrganization(environmentId: string, organizationId: string) {
+    return this.findOne({
+      _id: environmentId,
+      _organizationId: organizationId,
+    });
+  }
+
   async addApiKey(environmentId: string, key: EncryptedSecret, userId: string) {
     return await this.update(
       {
@@ -51,9 +58,8 @@ export class EnvironmentRepository extends BaseRepository<EnvironmentDBModel, En
     );
   }
 
-  // backward compatibility - update the query to { 'apiKeys.hash': hash } once encrypt-api-keys-migration executed
-  async findByApiKey({ key, hash }: { key: string; hash: string }) {
-    return await this.findOne({ $or: [{ 'apiKeys.key': key }, { 'apiKeys.hash': hash }] });
+  async findByApiKey({ hash }: { hash: string }) {
+    return await this.findOne({ 'apiKeys.hash': hash }, undefined, { readPreference: 'secondaryPreferred' });
   }
 
   async getApiKeys(environmentId: string): Promise<IApiKey[]> {

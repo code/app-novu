@@ -1,9 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IUpdateIntegrationBodyDto } from '@novu/shared';
 import { IsArray, IsBoolean, IsMongoId, IsOptional, IsString, ValidateNested } from 'class-validator';
-import { CredentialsDto } from './credentials.dto';
 import { Type } from 'class-transformer';
-import { StepFilter } from '../../shared/dtos/step-filter';
+import { CredentialsDto } from './credentials.dto';
+import { StepFilterDto } from '../../shared/dtos/step-filter-dto';
 
 export class UpdateIntegrationRequestDto implements IUpdateIntegrationBodyDto {
   @ApiPropertyOptional({ type: String })
@@ -37,16 +37,24 @@ export class UpdateIntegrationRequestDto implements IUpdateIntegrationBodyDto {
   @ValidateNested()
   credentials?: CredentialsDto;
 
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'If true, the Novu branding will be removed from the Inbox component',
+  })
+  @IsOptional()
+  @IsBoolean()
+  removeNovuBranding?: boolean;
+
   @ApiPropertyOptional({ type: Boolean })
   @IsOptional()
   @IsBoolean()
   check?: boolean;
 
   @ApiPropertyOptional({
-    type: [StepFilter],
+    type: [StepFilterDto],
   })
   @IsArray()
   @IsOptional()
   @ValidateNested({ each: true })
-  conditions?: StepFilter[];
+  conditions?: StepFilterDto[];
 }

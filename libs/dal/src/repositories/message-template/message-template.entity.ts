@@ -1,13 +1,14 @@
-import {
-  StepTypeEnum,
-  IMessageCTA,
-  IActor,
-  IMessageTemplate,
+import type {
+  ControlSchemas,
   EnvironmentId,
-  OrganizationId,
+  IActor,
+  IMessageCTA,
+  IMessageTemplate,
+  JSONSchemaDto,
   MessageTemplateContentType,
+  OrganizationId,
+  StepTypeEnum,
 } from '@novu/shared';
-import { JSONSchema7 } from 'json-schema';
 
 import { IEmailBlock, ITemplateVariable } from './types';
 import type { ChangePropsValueType } from '../../types/helpers';
@@ -56,13 +57,13 @@ export class MessageTemplateEntity implements IMessageTemplate {
 
   deleted?: boolean;
 
-  inputs?: {
-    schema: JSONSchema7;
-  };
+  controls?: ControlSchemas;
 
   output?: {
-    schema: JSONSchema7;
+    schema: JSONSchemaDto;
   };
+
+  code?: string;
 }
 
 export type MessageTemplateDBModel = ChangePropsValueType<

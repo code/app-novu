@@ -2,8 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { ChannelTypeEnum } from '@novu/shared';
 
 import { getWebhookSupportStatus } from '../integration';
-import { IS_DOCKER_HOSTED, WEBHOOK_URL } from '../../config';
-import { useAuthController, useEnvController } from '../../hooks';
+import { IS_SELF_HOSTED, WEBHOOK_URL } from '../../config';
+import { useEnvironment } from '../../hooks';
+import { useAuth } from '../../hooks/useAuth';
 
 export const useWebhookSupportStatus = ({
   hasCredentials,
@@ -14,8 +15,8 @@ export const useWebhookSupportStatus = ({
   integrationId?: string;
   channel?: ChannelTypeEnum;
 }) => {
-  const { environment } = useEnvController();
-  const { organization } = useAuthController();
+  const { environment } = useEnvironment();
+  const { currentOrganization } = useAuth();
 
   const { data: webhookSupportStatus, ...rest } = useQuery(
     ['webhookSupportStatus', integrationId],
@@ -30,14 +31,14 @@ export const useWebhookSupportStatus = ({
   );
 
   const isWebhookEnabled = !!(
-    !IS_DOCKER_HOSTED &&
+    !IS_SELF_HOSTED &&
     webhookSupportStatus &&
     channel &&
     [ChannelTypeEnum.EMAIL, ChannelTypeEnum.SMS].includes(channel)
   );
 
   const webhookUrl =
-    `${WEBHOOK_URL}/webhooks/organizations/${organization?._id}` +
+    `${WEBHOOK_URL}/webhooks/organizations/${currentOrganization?._id}` +
     `/environments/${environment?._id}/${channel}/${integrationId}`;
 
   return {

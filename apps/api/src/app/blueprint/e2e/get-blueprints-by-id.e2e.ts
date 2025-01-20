@@ -12,9 +12,9 @@ import {
 } from '@novu/shared';
 
 import { GroupedBlueprintResponse } from '../dto/grouped-blueprint.response.dto';
-import { CreateWorkflowRequestDto } from '../../workflows/dto';
+import { CreateWorkflowRequestDto } from '../../workflows-v1/dto';
 
-describe('Get blueprints by id - /blueprints/:templateId (GET)', async () => {
+describe('Get blueprints by id - /blueprints/:templateId (GET) #novu-v1', async () => {
   let session: UserSession;
   const notificationTemplateRepository: NotificationTemplateRepository = new NotificationTemplateRepository();
   const environmentRepository: EnvironmentRepository = new EnvironmentRepository();
@@ -37,7 +37,7 @@ describe('Get blueprints by id - /blueprints/:templateId (GET)', async () => {
 
     const blueprintById = (await session.testAgent.get(`/v1/blueprints/${blueprint._id}`).send()).body.data;
 
-    //validate that fetched blueprint by id is the same as from the initial allBlueprints fetch
+    // validate that fetched blueprint by id is the same as from the initial allBlueprints fetch
     expect(blueprintById.isBlueprint).to.equal(true);
     expect(blueprint.name).to.equal(blueprintById.name);
     expect(blueprint.description).to.equal(blueprintById.description);
@@ -68,7 +68,7 @@ describe('Get blueprints by id - /blueprints/:templateId (GET)', async () => {
 
     const test = await session.testAgent.get(`/v1/blueprints/${blueprint.triggers[0].identifier}`).send();
 
-    //validate that fetched blueprint by trigger identifier is the same as from the initial allBlueprints fetch
+    // validate that fetched blueprint by trigger identifier is the same as from the initial allBlueprints fetch
     expect(blueprintById.isBlueprint).to.equal(true);
     expect(blueprint.name).to.equal(blueprintById.name);
     expect(blueprint.description).to.equal(blueprintById.description);

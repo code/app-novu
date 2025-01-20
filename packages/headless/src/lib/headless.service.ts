@@ -1,19 +1,20 @@
 import {
+  MutationObserverResult,
   QueryClient,
   QueryObserverOptions,
   QueryObserverResult,
-  MutationObserverResult,
 } from '@tanstack/query-core';
 import io from 'socket.io-client';
 import {
   ApiService,
-  IUserPreferenceSettings,
   IStoreQuery,
   IUserGlobalPreferenceSettings,
+  IUserPreferenceSettings,
 } from '@novu/client';
 import {
-  IOrganizationEntity,
   IMessage,
+  INotificationDto,
+  IOrganizationEntity,
   IPaginatedResponse,
   WebSocketEventEnum,
 } from '@novu/shared';
@@ -35,8 +36,8 @@ import {
   IHeadlessServiceOptions,
   IMessageId,
   IUpdateActionVariables,
-  IUpdateUserPreferencesVariables,
   IUpdateUserGlobalPreferencesVariables,
+  IUpdateUserPreferencesVariables,
   UpdateResult,
 } from './types';
 
@@ -73,7 +74,7 @@ export class HeadlessService {
       this.api.initializeSession(
         this.options.applicationIdentifier,
         this.options.subscriberId,
-        this.options.subscriberHash
+        this.options.subscriberHash,
       ),
   };
 
@@ -187,7 +188,7 @@ export class HeadlessService {
 
   private callFetchListener = <T>(
     result: QueryObserverResult<T>,
-    listener: (result: FetchResult<T>) => void
+    listener: (result: FetchResult<T>) => void,
   ) =>
     listener({
       data: result.data,
@@ -200,7 +201,7 @@ export class HeadlessService {
 
   private callFetchListenerWithPagination = <T>(
     result: QueryObserverResult<IPaginatedResponse<T>>,
-    listener: (result: FetchResult<IPaginatedResponse<T>>) => void
+    listener: (result: FetchResult<IPaginatedResponse<T>>) => void,
   ) =>
     listener({
       data: result.data,
@@ -214,10 +215,10 @@ export class HeadlessService {
   private callUpdateListener = <
     TData = unknown,
     TError = unknown,
-    TVariables = unknown
+    TVariables = unknown,
   >(
     result: MutationObserverResult<TData, TError, TVariables>,
-    listener: (result: UpdateResult<TData, TError, TVariables>) => void
+    listener: (result: UpdateResult<TData, TError, TVariables>) => void,
   ) =>
     listener({
       data: result.data,
@@ -337,12 +338,9 @@ export class HeadlessService {
         WebSocketEventEnum.RECEIVED,
         (data?: { message: IMessage }) => {
           if (data?.message) {
-            this.queryClient.refetchQueries(NOTIFICATIONS_QUERY_KEY, {
-              exact: false,
-            });
             listener(data.message);
           }
-        }
+        },
       );
     }
 
@@ -367,11 +365,11 @@ export class HeadlessService {
           if (Number.isInteger(data?.unseenCount)) {
             this.queryClient.setQueryData<{ count: number }>(
               UNSEEN_COUNT_QUERY_KEY,
-              (oldData) => ({ count: data?.unseenCount ?? oldData.count })
+              (oldData) => ({ count: data?.unseenCount ?? oldData.count }),
             );
             listener(data.unseenCount);
           }
-        }
+        },
       );
     }
 
@@ -396,11 +394,11 @@ export class HeadlessService {
           if (Number.isInteger(data?.unreadCount)) {
             this.queryClient.setQueryData<{ count: number }>(
               UNREAD_COUNT_QUERY_KEY,
-              (oldData) => ({ count: data?.unreadCount ?? oldData.count })
+              (oldData) => ({ count: data?.unreadCount ?? oldData.count }),
             );
             listener(data.unreadCount);
           }
-        }
+        },
       );
     }
 
@@ -504,7 +502,7 @@ export class HeadlessService {
         IUserPreferenceSettings,
         unknown,
         IUpdateUserPreferencesVariables
-      >
+      >,
     ) => void;
     onSuccess?: (settings: IUserPreferenceSettings) => void;
     onError?: (error: unknown) => void;
@@ -521,7 +519,7 @@ export class HeadlessService {
           this.api.updateSubscriberPreference(
             variables.templateId,
             variables.channelType,
-            variables.checked
+            variables.checked,
           ),
         onSuccess: (data) => {
           this.queryClient.setQueryData<IUserPreferenceSettings[]>(
@@ -533,7 +531,7 @@ export class HeadlessService {
                 }
 
                 return setting;
-              })
+              }),
           );
         },
       },
@@ -569,7 +567,7 @@ export class HeadlessService {
         IUserGlobalPreferenceSettings,
         unknown,
         IUpdateUserGlobalPreferencesVariables
-      >
+      >,
     ) => void;
     onSuccess?: (settings: IUserGlobalPreferenceSettings) => void;
     onError?: (error: unknown) => void;
@@ -585,12 +583,12 @@ export class HeadlessService {
         mutationFn: (variables) =>
           this.api.updateSubscriberGlobalPreference(
             variables.preferences,
-            variables.enabled
+            variables.enabled,
           ),
         onSuccess: (data) => {
           this.queryClient.setQueryData<IUserGlobalPreferenceSettings[]>(
             USER_GLOBAL_PREFERENCES_QUERY_KEY,
-            () => [data]
+            () => [data],
           );
         },
       },
@@ -620,7 +618,7 @@ export class HeadlessService {
   }: {
     messageId: IMessageId;
     listener: (
-      result: UpdateResult<IMessage[], unknown, { messageId: IMessageId }>
+      result: UpdateResult<IMessage[], unknown, { messageId: IMessageId }>,
     ) => void;
     onSuccess?: (message: IMessage[]) => void;
     onError?: (error: unknown) => void;
@@ -670,7 +668,7 @@ export class HeadlessService {
   }: {
     messageId: IMessageId;
     listener: (
-      result: UpdateResult<IMessage[], unknown, { messageId: IMessageId }>
+      result: UpdateResult<IMessage[], unknown, { messageId: IMessageId }>,
     ) => void;
     onSuccess?: (message: IMessage[]) => void;
     onError?: (error: unknown) => void;
@@ -721,7 +719,7 @@ export class HeadlessService {
     messageId: IMessageId;
     mark: { seen?: boolean; read?: boolean };
     listener: (
-      result: UpdateResult<IMessage[], unknown, { messageId: IMessageId }>
+      result: UpdateResult<IMessage[], unknown, { messageId: IMessageId }>,
     ) => void;
     onSuccess?: (message: IMessage[]) => void;
     onError?: (error: unknown) => void;
@@ -768,7 +766,7 @@ export class HeadlessService {
   }: {
     messageId: string;
     listener: (
-      result: UpdateResult<IMessage, unknown, { messageId: string }>
+      result: UpdateResult<IMessage, unknown, { messageId: string }>,
     ) => void;
     onSuccess?: (message: IMessage) => void;
     onError?: (error: unknown) => void;
@@ -814,7 +812,7 @@ export class HeadlessService {
   }: {
     messageIds: string[];
     listener: (
-      result: UpdateResult<void, unknown, { messageIds: string[] }>
+      result: UpdateResult<void, unknown, { messageIds: string[] }>,
     ) => void;
     onSuccess?: (obj: void) => void;
     onError?: (error: unknown) => void;
@@ -867,7 +865,7 @@ export class HeadlessService {
     status: IUpdateActionVariables['status'];
     payload?: IUpdateActionVariables['payload'];
     listener: (
-      result: UpdateResult<IMessage, unknown, IUpdateActionVariables>
+      result: UpdateResult<IMessage, unknown, IUpdateActionVariables>,
     ) => void;
     onSuccess?: (data: IMessage) => void;
     onError?: (error: unknown) => void;
@@ -880,17 +878,25 @@ export class HeadlessService {
       IUpdateActionVariables
     >({
       options: {
-        mutationFn: (variables) =>
-          this.api.updateAction(
+        mutationFn: async (variables) => {
+          const notificationDto: INotificationDto = await this.api.updateAction(
             variables.messageId,
             variables.actionButtonType,
             variables.status,
-            variables.payload
-          ),
+            variables.payload,
+          );
+
+          // Transform INotificationDto to IMessage
+          return {
+            ...notificationDto,
+            payload: notificationDto.payload || {}, // Provide a default if optional
+          };
+        },
         onSuccess: (data) => {
           this.queryClient.refetchQueries(NOTIFICATIONS_QUERY_KEY, {
             exact: false,
           });
+          onSuccess?.(data); // Call onSuccess callback
         },
       },
       listener: (res) => this.callUpdateListener(res, listener),
@@ -1046,3 +1052,4 @@ export class HeadlessService {
       });
   }
 }
+// Function to transform INotificationDto to IMessage

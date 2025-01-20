@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ActorTypeEnum, ChannelTypeEnum } from '@novu/shared';
 import {
   AnalyticsService,
@@ -6,12 +6,13 @@ import {
   buildSubscriberKey,
   CachedEntity,
   CachedQuery,
+  InstrumentUsecase,
 } from '@novu/application-generic';
 import { MessageRepository, SubscriberEntity, SubscriberRepository } from '@novu/dal';
 
 import { GetNotificationsFeedCommand } from './get-notifications-feed.command';
-import { MessagesResponseDto } from '../../dtos/message-response.dto';
 import { ApiException } from '../../../shared/exceptions/api.exception';
+import { FeedResponseDto } from '../../dtos/feeds-response.dto';
 
 @Injectable()
 export class GetNotificationsFeed {
@@ -33,15 +34,16 @@ export class GetNotificationsFeed {
     }
   }
 
+  @InstrumentUsecase()
   @CachedQuery({
     builder: ({ environmentId, subscriberId, ...command }: GetNotificationsFeedCommand) =>
       buildFeedKey().cache({
-        environmentId: environmentId,
-        subscriberId: subscriberId,
+        environmentId,
+        subscriberId,
         ...command,
       }),
   })
-  async execute(command: GetNotificationsFeedCommand): Promise<MessagesResponseDto> {
+  async execute(command: GetNotificationsFeedCommand): Promise<FeedResponseDto> {
     const payload = this.getPayloadObject(command.payload);
 
     const subscriber = await this.fetchSubscriber({
@@ -51,9 +53,9 @@ export class GetNotificationsFeed {
 
     if (!subscriber) {
       throw new ApiException(
-        'Subscriber not found for this environment with the id: ' +
-          command.subscriberId +
-          '. Make sure to create a subscriber before fetching the feed.'
+        `Subscriber not found for this environment with the id: ${
+          command.subscriberId
+        }. Make sure to create a subscriber before fetching the feed.`
       );
     }
 
@@ -78,7 +80,7 @@ export class GetNotificationsFeed {
 
     for (const message of feed) {
       if (message._actorId && message.actor?.type === ActorTypeEnum.USER) {
-        message.actor.data = this.processUserAvatar(message.actorSubscriber);
+        message.actor.data = message.actorSubscriber?.avatar || null;
       }
     }
 
@@ -103,19 +105,15 @@ export class GetNotificationsFeed {
     const hasMore = feed.length < totalCount;
     totalCount = Math.min(totalCount, command.limit);
 
+    const data = feed.map((el) => ({ ...el, content: el.content as string }));
+
     return {
-      data: feed || [],
-      totalCount: totalCount,
-      hasMore: hasMore,
+      data,
+      totalCount,
+      hasMore,
       pageSize: command.limit,
       page: command.page,
     };
-  }
-
-  private getHasMore(page: number, LIMIT: number, feed, totalCount) {
-    const currentPaginationTotal = page * LIMIT + feed.length;
-
-    return currentPaginationTotal < totalCount;
   }
 
   @CachedEntity({
@@ -133,9 +131,5 @@ export class GetNotificationsFeed {
     _environmentId: string;
   }): Promise<SubscriberEntity | null> {
     return await this.subscriberRepository.findBySubscriberId(_environmentId, subscriberId);
-  }
-
-  private processUserAvatar(actorSubscriber?: SubscriberEntity): string | null {
-    return actorSubscriber?.avatar || null;
   }
 }

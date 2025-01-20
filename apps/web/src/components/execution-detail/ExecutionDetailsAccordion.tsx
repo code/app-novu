@@ -1,8 +1,8 @@
 import { Accordion, createStyles } from '@mantine/core';
 
+import { colors } from '@novu/design-system';
 import { ExecutionDetailsStepContent } from './ExecutionDetailsStepContent';
 import { ExecutionDetailsStepHeader } from './ExecutionDetailsStepHeader';
-import { colors } from '@novu/design-system';
 
 const useStyles = createStyles((theme) => ({
   control: {
@@ -21,7 +21,7 @@ const useStyles = createStyles((theme) => ({
     color: `${colors.B80}`,
     padding: '0',
 
-    ['&[data-active]']: {
+    '&[data-active]': {
       border: `1px solid ${theme.colorScheme === 'dark' ? colors.B60 : colors.B70}`,
     },
   },
@@ -34,7 +34,7 @@ const useStyles = createStyles((theme) => ({
   },
 }));
 
-export const ExecutionDetailsAccordion = ({ identifier, steps, subscriberVariables }) => {
+export const ExecutionDetailsAccordion = ({ identifier, steps, subscriberVariables, defaultOpen = undefined }) => {
   const { classes } = useStyles();
 
   if (!steps || steps.length <= 0) {
@@ -42,15 +42,20 @@ export const ExecutionDetailsAccordion = ({ identifier, steps, subscriberVariabl
   }
 
   return (
-    <Accordion key="execution-details-accordion" chevronPosition="right" classNames={classes}>
+    <Accordion
+      key="execution-details-accordion"
+      chevronPosition="right"
+      defaultValue={defaultOpen}
+      classNames={classes}
+    >
       {steps.map((step) => (
-        <Accordion.Item key={`execution-details-step-${step.id}`} value={step.id}>
+        <Accordion.Item key={`execution-details-step-${step._id}`} value={step._id}>
           <Accordion.Control>
             <ExecutionDetailsStepHeader step={step} />
           </Accordion.Control>
           <Accordion.Panel>
             <ExecutionDetailsStepContent
-              key={`execution-details-step-content-${step.id}`}
+              key={`execution-details-step-content-${step._id}`}
               identifier={identifier}
               step={step}
               subscriberVariables={subscriberVariables}

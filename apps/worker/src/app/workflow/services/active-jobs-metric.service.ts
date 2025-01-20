@@ -1,5 +1,3 @@
-const nr = require('newrelic');
-
 import {
   ActiveJobsMetricQueueService,
   ActiveJobsMetricWorkerService,
@@ -7,9 +5,10 @@ import {
   QueueBaseService,
   WorkerOptions,
 } from '@novu/application-generic';
+import { CronExpressionEnum } from '@novu/shared';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import { checkingForCronJob } from '../../shared/utils';
+const nr = require('newrelic');
 
 const LOG_CONTEXT = 'ActiveJobMetricService';
 const METRIC_JOB_ID = 'metrics-job';
@@ -26,7 +25,6 @@ export class ActiveJobsMetricService {
       this.activeJobsMetricWorkerService.createWorker(this.getWorkerProcessor(), this.getWorkerOptions());
 
       this.activeJobsMetricWorkerService.worker.on('completed', async (job) => {
-        await checkingForCronJob(process.env.ACTIVE_CRON_ID);
         Logger.log({ jobId: job.id }, 'Metric Completed Job', LOG_CONTEXT);
       });
 
@@ -66,7 +64,7 @@ export class ActiveJobsMetricService {
               repeatJobKey: METRIC_JOB_ID,
               repeat: {
                 immediately: true,
-                pattern: '* * * * * *',
+                pattern: CronExpressionEnum.EVERY_30_SECONDS,
               },
               removeOnFail: true,
               removeOnComplete: true,
@@ -94,6 +92,7 @@ export class ActiveJobsMetricService {
 
   private getWorkerProcessor() {
     return async () => {
+      // eslint-disable-next-line no-async-promise-executor
       return await new Promise<void>(async (resolve, reject): Promise<void> => {
         Logger.log('metric job started', LOG_CONTEXT);
         const deploymentName = process.env.FLEET_NAME ?? 'default';
@@ -113,10 +112,12 @@ export class ActiveJobsMetricService {
             this.metricsService.recordMetric(`Queue/${deploymentName}/${queueService.topic}/active`, activeCount);
           }
 
+          // eslint-disable-next-line no-promise-executor-return
           return resolve();
         } catch (error) {
           Logger.error({ error }, 'Error occurred while processing metrics', LOG_CONTEXT);
 
+          // eslint-disable-next-line no-promise-executor-return
           return reject(error);
         }
       });

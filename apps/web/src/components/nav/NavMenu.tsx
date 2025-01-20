@@ -1,9 +1,9 @@
 import { IconArrowBack } from '@novu/design-system';
-import { LocalizedMessage } from '@novu/shared-web';
 import { FC, MouseEventHandler } from 'react';
-import { css, cx } from '../../styled-system/css';
-import { Flex, styled, VStack } from '../../styled-system/jsx';
-import { title as titleRecipe } from '../../styled-system/recipes';
+import { css, cx } from '@novu/novui/css';
+import { Flex, styled, VStack } from '@novu/novui/jsx';
+import { title as titleRecipe } from '@novu/novui/recipes';
+import { LocalizedMessage } from '../../types/LocalizedMessage';
 
 const iconButtonStyles = css({
   display: 'inline-flex',
@@ -29,8 +29,9 @@ const iconButtonStyles = css({
 });
 
 const navStyles = css({
-  h: '100%',
-  display: 'flex',
+  display: 'flex !important',
+  flex: '1',
+  justifyContent: 'stretch',
   flexDirection: 'column',
 });
 

@@ -17,7 +17,7 @@ test('send chat should call the provider method correctly', async () => {
       channel: ChannelTypeEnum.CHAT,
       template: `Name: {{firstName}}`,
     },
-    provider
+    provider,
   );
 
   await chatHandler.send({
@@ -29,10 +29,13 @@ test('send chat should call the provider method correctly', async () => {
   });
 
   expect(spy).toHaveBeenCalled();
-  expect(spy).toHaveBeenCalledWith({
-    content: 'Name: test name',
-    webhookUrl: 'https://test.com',
-  });
+  expect(spy).toHaveBeenCalledWith(
+    {
+      content: 'Name: test name',
+      webhookUrl: 'https://test.com',
+    },
+    {},
+  );
   spy.mockRestore();
 });
 
@@ -54,7 +57,7 @@ test('send chat should template method correctly', async () => {
       channel: ChannelTypeEnum.CHAT,
       template: spyTemplateFunction,
     },
-    provider
+    provider,
   );
 
   await chatHandler.send({

@@ -1,3 +1,4 @@
+/* eslint-disable global-require */
 import {
   MiddlewareConsumer,
   Module,
@@ -9,14 +10,16 @@ import {
   ForwardReference,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { EnvironmentsModule } from '../environments/environments.module';
+import { Type } from '@nestjs/common/interfaces/type.interface';
+import { isClerkEnabled } from '@novu/shared';
+import { EnvironmentsModuleV1 } from '../environments-v1/environments-v1.module';
 import { IntegrationModule } from '../integrations/integrations.module';
 import { SharedModule } from '../shared/shared.module';
 import { UserModule } from '../user/user.module';
 import { OrganizationController } from './organization.controller';
 import { USE_CASES } from './usecases';
 import { AuthModule } from '../auth/auth.module';
-import { Type } from '@nestjs/common/interfaces/type.interface';
+import { EEOrganizationController } from './ee.organization.controller';
 
 const enterpriseImports = (): Array<Type | DynamicModule | Promise<DynamicModule> | ForwardReference> => {
   const modules: Array<Type | DynamicModule | Promise<DynamicModule> | ForwardReference> = [];
@@ -33,24 +36,34 @@ const enterpriseImports = (): Array<Type | DynamicModule | Promise<DynamicModule
   return modules;
 };
 
+function getControllers() {
+  if (isClerkEnabled()) {
+    return [EEOrganizationController];
+  }
+
+  return [OrganizationController];
+}
+
 @Module({
   imports: [
     SharedModule,
     UserModule,
-    EnvironmentsModule,
+    EnvironmentsModuleV1,
     IntegrationModule,
     forwardRef(() => AuthModule),
     ...enterpriseImports(),
   ],
-  controllers: [OrganizationController],
+  controllers: [...getControllers()],
   providers: [...USE_CASES],
   exports: [...USE_CASES],
 })
 export class OrganizationModule implements NestModule {
   configure(consumer: MiddlewareConsumer): MiddlewareConsumer | void {
-    consumer.apply(AuthGuard).exclude({
-      method: RequestMethod.GET,
-      path: '/organizations/invite/:inviteToken',
-    });
+    if (process.env.NOVU_ENTERPRISE !== 'true' && process.env.CI_EE_TEST !== 'true') {
+      consumer.apply(AuthGuard).exclude({
+        method: RequestMethod.GET,
+        path: '/organizations/invite/:inviteToken',
+      });
+    }
   }
 }

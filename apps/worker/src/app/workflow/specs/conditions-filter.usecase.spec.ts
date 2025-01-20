@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import * as sinon from 'sinon';
+import sinon from 'sinon';
 import axios from 'axios';
 import { Duration, sub } from 'date-fns';
 import {
@@ -20,7 +20,6 @@ describe('Message filter matcher', function () {
     add: sinon.stub(),
   };
   const conditionsFilter = new ConditionsFilter(
-    undefined as any,
     undefined as any,
     undefined as any,
     undefined as any,
@@ -617,7 +616,7 @@ describe('Message filter matcher', function () {
     expect(requestsCount).to.equal(0);
     expect(matchedMessage.passed).to.equal(true);
 
-    //Reorder children order to make sure it is not random
+    // Reorder children order to make sure it is not random
 
     matchedMessage = await conditionsFilter.filter(
       mapConditionsFilterCommand({
@@ -681,7 +680,7 @@ describe('Message filter matcher', function () {
     expect(requestsCount).to.equal(0);
     expect(matchedMessage.passed).to.equal(false);
 
-    //Reorder children order to make sure it is not random
+    // Reorder children order to make sure it is not random
 
     matchedMessage = await conditionsFilter.filter(
       mapConditionsFilterCommand({
@@ -731,7 +730,6 @@ describe('Message filter matcher', function () {
           undefined as any,
           undefined as any,
           undefined as any,
-          undefined as any,
           executionLogQueueService as any,
           new CompileTemplate()
         );
@@ -769,7 +767,6 @@ describe('Message filter matcher', function () {
           undefined as any,
           undefined as any,
           undefined as any,
-          undefined as any,
           executionLogQueueService as any,
           new CompileTemplate()
         );
@@ -801,7 +798,6 @@ describe('Message filter matcher', function () {
           undefined as any,
           undefined as any,
           undefined as any,
-          undefined as any,
           executionLogQueueService as any,
           new CompileTemplate()
         );
@@ -823,7 +819,6 @@ describe('Message filter matcher', function () {
       it('allows to process if the subscriber is online', async () => {
         const filter = new ConditionsFilter(
           { findOne: () => Promise.resolve(getSubscriber()) } as any,
-          undefined as any,
           undefined as any,
           undefined as any,
           undefined as any,
@@ -853,7 +848,6 @@ describe('Message filter matcher', function () {
           undefined as any,
           undefined as any,
           undefined as any,
-          undefined as any,
           executionLogQueueService as any,
           new CompileTemplate()
         );
@@ -879,7 +873,6 @@ describe('Message filter matcher', function () {
           {
             findOne: () => Promise.resolve(getSubscriber({ isOnline: true }, { subDuration: { minutes: 3 } })),
           } as any,
-          undefined as any,
           undefined as any,
           undefined as any,
           undefined as any,
@@ -922,7 +915,6 @@ describe('Message filter matcher', function () {
           undefined as any,
           undefined as any,
           undefined as any,
-          undefined as any,
           executionLogQueueService as any,
           new CompileTemplate()
         );
@@ -947,7 +939,6 @@ describe('Message filter matcher', function () {
           {
             findOne: () => Promise.resolve(getSubscriber({ isOnline: true }, { subDuration: { minutes: 10 } })),
           } as any,
-          undefined as any,
           undefined as any,
           undefined as any,
           undefined as any,
@@ -980,7 +971,6 @@ describe('Message filter matcher', function () {
           undefined as any,
           undefined as any,
           undefined as any,
-          undefined as any,
           executionLogQueueService as any,
           new CompileTemplate()
         );
@@ -1005,7 +995,6 @@ describe('Message filter matcher', function () {
           {
             findOne: () => Promise.resolve(getSubscriber({ isOnline: false }, { subDuration: { minutes: 6 } })),
           } as any,
-          undefined as any,
           undefined as any,
           undefined as any,
           undefined as any,
@@ -1038,7 +1027,6 @@ describe('Message filter matcher', function () {
           undefined as any,
           undefined as any,
           undefined as any,
-          undefined as any,
           executionLogQueueService as any,
           new CompileTemplate()
         );
@@ -1063,7 +1051,6 @@ describe('Message filter matcher', function () {
           {
             findOne: () => Promise.resolve(getSubscriber({ isOnline: false }, { subDuration: { hours: 23 } })),
           } as any,
-          undefined as any,
           undefined as any,
           undefined as any,
           undefined as any,

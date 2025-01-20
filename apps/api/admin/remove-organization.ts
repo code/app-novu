@@ -1,27 +1,22 @@
 /* eslint-disable no-console */
 import '../src/config';
 import {
-  OrganizationRepository,
+  CommunityOrganizationRepository,
   EnvironmentRepository,
-  MemberRepository,
+  CommunityMemberRepository,
   SubscriberRepository,
   IntegrationRepository,
   NotificationTemplateRepository,
   ChangeRepository,
-  ExecutionDetailsRepository,
   BaseRepository,
   EnvironmentId,
   OrganizationId,
   EnforceEnvOrOrgIds,
   FeedRepository,
-  JobRepository,
   LayoutRepository,
-  LogRepository,
   MessageRepository,
   MessageTemplateRepository,
   NotificationGroupRepository,
-  NotificationRepository,
-  SubscriberPreferenceRepository,
   TenantRepository,
   TopicRepository,
   TopicSubscribersRepository,
@@ -60,9 +55,9 @@ async function removeData<T extends BaseRepository<object, E, EnforceEnvOrOrgIds
 }
 
 connect(async () => {
-  const organizationRepository = new OrganizationRepository();
+  const organizationRepository = new CommunityOrganizationRepository();
   const environmentRepository = new EnvironmentRepository();
-  const memberRepository = new MemberRepository();
+  const memberRepository = new CommunityMemberRepository();
 
   const organization = await organizationRepository.findById(ORG_ID);
   if (!organization) {
@@ -93,13 +88,11 @@ connect(async () => {
   await removeData(new IntegrationRepository(), 'integrations', organization._id, envIds);
   // await removeData(new JobRepository(), 'jobs', organization._id, envIds);
   await removeData(new LayoutRepository(), 'layouts', organization._id, envIds);
-  await removeData(new LogRepository(), 'logs', organization._id, envIds);
   await removeData(new MessageRepository(), 'messages', organization._id, envIds);
   await removeData(new MessageTemplateRepository(), 'messagetemplates', organization._id, envIds);
   await removeData(new NotificationGroupRepository(), 'notificationgroups', organization._id, envIds);
   // await removeData(new NotificationRepository(), 'notifications', organization._id, envIds);
   await removeData(new NotificationTemplateRepository(), 'workflows', organization._id, envIds);
-  await removeData(new SubscriberPreferenceRepository(), 'subscriberpreferences', organization._id, envIds);
   await removeData(new SubscriberRepository(), 'subscribers', organization._id, envIds);
   await removeData(new TenantRepository(), 'tenants', organization._id, envIds);
   await removeData(new TopicRepository(), 'topics', organization._id, envIds);

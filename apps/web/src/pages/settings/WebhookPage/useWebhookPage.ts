@@ -1,12 +1,13 @@
 import { useClipboard } from '@mantine/hooks';
 import { successMessage, errorMessage } from '@novu/design-system';
 import { IResponseError, checkIsResponseError } from '@novu/shared';
-import { MAIL_SERVER_DOMAIN, useEnvController, updateDnsSettings } from '@novu/shared-web';
 import { useMutation } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { MAIL_SERVER_DOMAIN } from '../../../config';
+import { useEnvironment, useEffectOnce } from '../../../hooks';
+import { updateDnsSettings } from '../../../api';
 import { validateMxRecord } from '../../../api/inbound-parse';
-import { useEffectOnce } from '../../../hooks';
 import { getWebhookClaimStatusFromEnvironment } from './getWebhookClaimStatusFromEnvironment';
 import { WebhookClaimStatus } from './WebhookPage.types';
 
@@ -15,7 +16,7 @@ export const useWebhookPage = () => {
 
   const [isMxRecordRefreshing, setIsMxRecordRefreshing] = useState<boolean>(false);
   const mxRecordClipboard = useClipboard({ timeout: 1000 });
-  const { environment, refetchEnvironment } = useEnvController();
+  const { environment, refetchEnvironments } = useEnvironment();
 
   const { mutateAsync: updateDnsSettingsMutation, isLoading: isUpdateDnsSettingsLoading } = useMutation<
     { dns: { mxRecordConfigured: boolean; inboundParseDomain: string } },
@@ -23,7 +24,7 @@ export const useWebhookPage = () => {
     { payload: { inboundParseDomain: string | undefined }; environmentId: string }
   >(async ({ payload, environmentId }) => {
     const updatedSettings = await updateDnsSettings(payload, environmentId);
-    await refetchEnvironment();
+    await refetchEnvironments();
 
     return updatedSettings;
   });
@@ -68,15 +69,17 @@ export const useWebhookPage = () => {
   async function handleCheckRecords() {
     try {
       setIsMxRecordRefreshing(true);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 2000);
+      });
       const record = await validateMxRecord();
 
       if (environment?.dns && record.mxRecordConfigured !== environment.dns.mxRecordConfigured) {
-        await refetchEnvironment();
+        await refetchEnvironments();
       }
     } catch (err: unknown) {
       if (checkIsResponseError(err)) {
-        errorMessage(err.message);
+        errorMessage(err?.message);
       }
     } finally {
       setIsMxRecordRefreshing(false);

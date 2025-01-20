@@ -1,25 +1,40 @@
 import { ApiProperty } from '@nestjs/swagger';
-
 import { ITopicSubscriber } from '@novu/shared';
 
-import { EnvironmentId, ExternalSubscriberId, OrganizationId, SubscriberId, TopicId, TopicKey } from '../types';
-
 export class TopicSubscriberDto implements ITopicSubscriber {
-  @ApiProperty()
-  _organizationId: OrganizationId;
+  @ApiProperty({
+    description: 'Unique identifier for the organization',
+    example: 'org_123456789',
+  })
+  _organizationId: string;
 
-  @ApiProperty()
-  _environmentId: EnvironmentId;
+  @ApiProperty({
+    description: 'Unique identifier for the environment',
+    example: 'env_123456789',
+  })
+  _environmentId: string;
 
-  @ApiProperty()
-  _subscriberId: SubscriberId;
+  @ApiProperty({
+    description: 'Unique identifier for the subscriber',
+    example: 'sub_123456789',
+  })
+  _subscriberId: string;
 
-  @ApiProperty()
-  _topicId: TopicId;
+  @ApiProperty({
+    description: 'Unique identifier for the topic',
+    example: 'topic_123456789',
+  })
+  _topicId: string;
 
-  @ApiProperty()
-  topicKey: TopicKey;
+  @ApiProperty({
+    description: 'Key associated with the topic',
+    example: 'my_topic_key',
+  })
+  topicKey: string;
 
-  @ApiProperty()
-  externalSubscriberId: ExternalSubscriberId;
+  @ApiProperty({
+    description: 'External identifier for the subscriber',
+    example: 'external_subscriber_123',
+  })
+  externalSubscriberId: string;
 }

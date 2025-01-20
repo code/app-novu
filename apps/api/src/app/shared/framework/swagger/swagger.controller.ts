@@ -1,8 +1,18 @@
 /* eslint-disable max-len */
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import { INestApplication } from '@nestjs/common';
+import { API_KEY_SWAGGER_SECURITY_NAME } from '@novu/application-generic';
+import { SecuritySchemeObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { injectDocumentComponents } from './injection';
+import { removeEndpointsWithoutApiKey, transformDocument } from './open.api.manipulation.component';
+import metadata from '../../../../metadata';
 
+export const API_KEY_SECURITY_DEFINITIONS: SecuritySchemeObject = {
+  type: 'apiKey',
+  name: 'Authorization',
+  in: 'header',
+  description: 'API key authentication. Allowed headers-- "Authorization: ApiKey <api_key>".',
+};
 const options = new DocumentBuilder()
   .setTitle('Novu API')
   .setDescription('Novu REST API. Please see https://docs.novu.co/api-reference for more details.')
@@ -11,13 +21,9 @@ const options = new DocumentBuilder()
   .setExternalDoc('Novu Documentation', 'https://docs.novu.co')
   .setTermsOfService('https://novu.co/terms')
   .setLicense('MIT', 'https://opensource.org/license/mit')
-  .addServer(process.env.API_ROOT_URL)
-  .addApiKey({
-    type: 'apiKey',
-    name: 'Authorization',
-    in: 'header',
-    description: 'API key authentication. Allowed headers-- "Authorization: ApiKey <api_key>".',
-  })
+  .addServer('https://api.novu.co')
+  .addServer('https://eu.api.novu.co')
+  .addApiKey(API_KEY_SECURITY_DEFINITIONS, API_KEY_SWAGGER_SECURITY_NAME)
   .addTag(
     'Events',
     `Events represent a change in state of a subscriber. They are used to trigger workflows, and enable you to send notifications to subscribers based on their actions.`,
@@ -97,11 +103,26 @@ const options = new DocumentBuilder()
     'Execution Details',
     `Execution details are used to track the execution of a workflow. They provided detailed information on the execution of a workflow, including the status of each step, the input and output of each step, and the overall status of the execution.`,
     { url: 'https://docs.novu.co/activity-feed' }
-  )
-  .build();
+  );
 
-export const setupSwagger = (app: INestApplication) => {
-  const document = injectDocumentComponents(SwaggerModule.createDocument(app, options));
+if (process.env.NOVU_ENTERPRISE === 'true') {
+  options.addTag(
+    'Translations',
+    `Translations are used to localize your messages for different languages and regions. Novu provides a way to create and manage translations for your messages. You can create translations for your messages in different languages and regions, and assign them to your subscribers based on their preferences.`,
+    { url: 'https://docs.novu.co/content-creation-design/translations' }
+  );
+}
+export const setupSwagger = async (app: INestApplication) => {
+  await SwaggerModule.loadPluginMetadata(metadata);
+  const document = injectDocumentComponents(
+    SwaggerModule.createDocument(app, options.build(), {
+      operationIdFactory: (controllerKey: string, methodKey: string) => `${controllerKey}_${methodKey}`,
+      deepScanRoutes: true,
+      ignoreGlobalPrefix: false,
+      include: [],
+      extraModels: [],
+    })
+  );
 
   SwaggerModule.setup('api', app, {
     ...document,
@@ -110,9 +131,40 @@ export const setupSwagger = (app: INestApplication) => {
       title: `DEPRECATED: ${document.info.title}. Use /openapi.{json,yaml} instead.`,
     },
   });
-  SwaggerModule.setup('openapi', app, document, {
+  SwaggerModule.setup('openapi', app, removeEndpointsWithoutApiKey(document), {
     jsonDocumentUrl: 'openapi.json',
     yamlDocumentUrl: 'openapi.yaml',
     explorer: process.env.NODE_ENV !== 'production',
   });
+  sdkSetup(app, document);
 };
+function sdkSetup(app: INestApplication, document: OpenAPIObject) {
+  // eslint-disable-next-line no-param-reassign
+  document['x-speakeasy-name-override'] = [
+    { operationId: '^.*get.*', methodNameOverride: 'retrieve' },
+    { operationId: '^.*retrieve.*', methodNameOverride: 'retrieve' },
+    { operationId: '^.*create.*', methodNameOverride: 'create' },
+    { operationId: '^.*update.*', methodNameOverride: 'update' },
+    { operationId: '^.*list.*', methodNameOverride: 'list' },
+    { operationId: '^.*delete.*', methodNameOverride: 'delete' },
+    { operationId: '^.*remove.*', methodNameOverride: 'delete' },
+  ];
+  // eslint-disable-next-line no-param-reassign
+  document['x-speakeasy-retries'] = {
+    strategy: 'backoff',
+    backoff: {
+      initialInterval: 1000,
+      maxInterval: 30000,
+      maxElapsedTime: 3600000,
+      exponent: 1.5,
+    },
+    statusCodes: [408, 409, 429, '5XX'],
+    retryConnectionErrors: true,
+  };
+
+  SwaggerModule.setup('openapi.sdk', app, transformDocument(document), {
+    jsonDocumentUrl: 'openapi.sdk.json',
+    yamlDocumentUrl: 'openapi.sdk.yaml',
+    explorer: process.env.NODE_ENV !== 'production',
+  });
+}

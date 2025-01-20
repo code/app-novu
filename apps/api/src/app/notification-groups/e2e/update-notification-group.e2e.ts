@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { UserSession } from '@novu/testing';
 
-describe('Update Notification Group - /notification-groups/:id (PATCH)', async () => {
+describe('Update Notification Group - /notification-groups/:id (PATCH) #novu-v1', async () => {
   let session: UserSession;
 
   beforeEach(async () => {
@@ -14,7 +14,7 @@ describe('Update Notification Group - /notification-groups/:id (PATCH)', async (
       name: 'Test name 1',
     });
 
-    const id = postNotificationGroup.body.data.id;
+    const { id } = postNotificationGroup.body.data;
 
     const { body: getNotificationGroupResult } = await session.testAgent.get(`/v1/notification-groups/${id}`);
 
@@ -40,7 +40,7 @@ describe('Update Notification Group - /notification-groups/:id (PATCH)', async (
       name: 'Test name',
     });
 
-    const id = postNotificationGroup1.body.data.id;
+    const { id } = postNotificationGroup1.body.data;
 
     await session.testAgent.delete(`/v1/notification-groups/${id}`);
 

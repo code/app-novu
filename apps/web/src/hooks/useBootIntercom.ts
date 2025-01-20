@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useIntercom } from 'react-use-intercom';
-import { useAuthContext } from '../components/providers/AuthProvider';
+import { useAuth } from './useAuth';
 import { INTERCOM_APP_ID } from '../config';
 
 export function useBootIntercom() {
-  const { currentOrganization, currentUser } = useAuthContext();
+  const { currentOrganization, currentUser } = useAuth();
   const { boot } = useIntercom();
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export function useBootIntercom() {
       boot({
         userId: currentUser._id,
         email: currentUser?.email ?? '',
-        name: currentUser?.firstName + ' ' + currentUser?.lastName,
+        name: `${currentUser?.firstName} ${currentUser?.lastName}`,
         createdAt: currentUser?.createdAt,
         company: {
           name: currentOrganization?.name,

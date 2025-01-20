@@ -17,12 +17,12 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/node/build" />
       <excludeFolder url="file://$MODULE_DIR$/apps/web/storybook-static" />
       <excludeFolder url="file://$MODULE_DIR$/providers/emailjs/build" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/cli/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/novu/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/stateless/build" />
       <excludeFolder url="file://$MODULE_DIR$/libs/sdk/dist" />
       <excludeFolder url="file://$MODULE_DIR$/libs/sdk/.rpt2_cache" />
       <excludeFolder url="file://$MODULE_DIR$/libs/embed/.rpt2_cache" />
-      <excludeFolder url="file://$MODULE_DIR$/libs/shared/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/shared/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/nest/build" />
       <excludeFolder url="file://$MODULE_DIR$/providers/mailersend/build" />
       <excludeFolder url="file://$MODULE_DIR$/providers/mailgun/build" />
@@ -43,6 +43,8 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/notification-center/.storybook" />
       <excludeFolder url="file://$MODULE_DIR$/packages/notification-center/build" />
       <excludeFolder url="file://$MODULE_DIR$/.source" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/web/src/styled-system" />
+      <excludeFolder url="file://$MODULE_DIR$/libs/novui/styled-system" />
       <excludePattern pattern="dist" />
       <excludePattern pattern="build" />
     </content>

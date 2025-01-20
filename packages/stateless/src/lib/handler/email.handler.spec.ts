@@ -48,13 +48,16 @@ test('it should be able to accept subject as a function and read message configu
   });
 
   expect(spy).toHaveBeenCalled();
-  expect(spy).toHaveBeenCalledWith({
-    attachments: undefined,
-    text: '',
-    html: `<div data-test-id="theme-layout-wrapper"><img src="logo-url"/><div><h1>Test Header</div> Name: test name</div></div>`,
-    subject: 'should pass',
-    to: ['test@email.com'],
-  });
+  expect(spy).toHaveBeenCalledWith(
+    {
+      attachments: undefined,
+      text: '',
+      html: `<div data-test-id="theme-layout-wrapper"><img src="logo-url"/><div><h1>Test Header</div> Name: test name</div></div>`,
+      subject: 'should pass',
+      to: ['test@email.com'],
+    },
+    {},
+  );
   spy.mockRestore();
 });
 
@@ -91,7 +94,7 @@ test('it should be able to accept subject as a function and access outer scope',
       template: `<div><h1>Test Header</div> Name: {{firstName}}</div>`,
     },
     provider,
-    theme
+    theme,
   );
 
   await emailHandler.send({
@@ -101,13 +104,16 @@ test('it should be able to accept subject as a function and access outer scope',
   });
 
   expect(spy).toHaveBeenCalled();
-  expect(spy).toHaveBeenCalledWith({
-    attachments: undefined,
-    text: '',
-    html: `<div data-test-id="theme-layout-wrapper"><img src="logo-url"/><div><h1>Test Header</div> Name: test name</div></div>`,
-    subject: 'test',
-    to: ['test@email.com'],
-  });
+  expect(spy).toHaveBeenCalledWith(
+    {
+      attachments: undefined,
+      text: '',
+      html: `<div data-test-id="theme-layout-wrapper"><img src="logo-url"/><div><h1>Test Header</div> Name: test name</div></div>`,
+      subject: 'test',
+      to: ['test@email.com'],
+    },
+    {},
+  );
   spy.mockRestore();
 });
 
@@ -142,7 +148,7 @@ test('it should be able to accept subject as a function', async () => {
       template: `<div><h1>Test Header</div> Name: {{firstName}}</div>`,
     },
     provider,
-    theme
+    theme,
   );
 
   await emailHandler.send({
@@ -152,13 +158,16 @@ test('it should be able to accept subject as a function', async () => {
   });
 
   expect(spy).toHaveBeenCalled();
-  expect(spy).toHaveBeenCalledWith({
-    attachments: undefined,
-    text: '',
-    html: `<div data-test-id="theme-layout-wrapper"><img src="logo-url"/><div><h1>Test Header</div> Name: test name</div></div>`,
-    subject: 'test',
-    to: ['test@email.com'],
-  });
+  expect(spy).toHaveBeenCalledWith(
+    {
+      attachments: undefined,
+      text: '',
+      html: `<div data-test-id="theme-layout-wrapper"><img src="logo-url"/><div><h1>Test Header</div> Name: test name</div></div>`,
+      subject: 'test',
+      to: ['test@email.com'],
+    },
+    {},
+  );
   spy.mockRestore();
 });
 
@@ -191,7 +200,7 @@ test('send should call the provider method correctly', async () => {
       template: `<div><h1>Test Header</div> Name: {{firstName}}</div>`,
     },
     provider,
-    theme
+    theme,
   );
 
   await emailHandler.send({
@@ -201,13 +210,16 @@ test('send should call the provider method correctly', async () => {
   });
 
   expect(spy).toHaveBeenCalled();
-  expect(spy).toHaveBeenCalledWith({
-    attachments: undefined,
-    text: '',
-    html: `<div data-test-id="theme-layout-wrapper"><img src="logo-url"/><div><h1>Test Header</div> Name: test name</div></div>`,
-    subject: 'test',
-    to: ['test@email.com'],
-  });
+  expect(spy).toHaveBeenCalledWith(
+    {
+      attachments: undefined,
+      text: '',
+      html: `<div data-test-id="theme-layout-wrapper"><img src="logo-url"/><div><h1>Test Header</div> Name: test name</div></div>`,
+      subject: 'test',
+      to: ['test@email.com'],
+    },
+    {},
+  );
   spy.mockRestore();
 });
 
@@ -243,7 +255,7 @@ test('send should call template method correctly', async () => {
       template: spyTemplateFunction,
     },
     provider,
-    theme
+    theme,
   );
 
   await emailHandler.send({
@@ -290,7 +302,7 @@ test('send should handle attachments correctly', async () => {
       template: `<div><h1>Test Header</div> Name: {{firstName}}</div>`,
     },
     provider,
-    theme
+    theme,
   );
 
   await emailHandler.send({

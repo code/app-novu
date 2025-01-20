@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as Sentry from '@sentry/node';
+import { addBreadcrumb } from '@sentry/node';
 import { ModuleRef } from '@nestjs/core';
 
 import {
@@ -31,14 +31,13 @@ import {
   SelectVariant,
   ExecutionLogRoute,
   ExecutionLogRouteCommand,
-  IChimeraPushResponse,
 } from '@novu/application-generic';
-import type { IPushOptions } from '@novu/stateless';
+import { IPushOptions } from '@novu/stateless';
+import { PushOutput } from '@novu/framework/internal';
 
 import { SendMessageCommand } from './send-message.command';
 import { SendMessageBase } from './send-message.base';
 
-import { CreateLog } from '../../../shared/logs';
 import { PlatformException } from '../../../shared/utils';
 
 const LOG_CONTEXT = 'SendMessagePush';
@@ -50,7 +49,6 @@ export class SendMessagePush extends SendMessageBase {
   constructor(
     protected subscriberRepository: SubscriberRepository,
     protected messageRepository: MessageRepository,
-    protected createLogUsecase: CreateLog,
     protected executionLogRoute: ExecutionLogRoute,
     private compileTemplate: CompileTemplate,
     protected selectIntegration: SelectIntegration,
@@ -60,7 +58,6 @@ export class SendMessagePush extends SendMessageBase {
   ) {
     super(
       messageRepository,
-      createLogUsecase,
       executionLogRoute,
       subscriberRepository,
       selectIntegration,
@@ -72,15 +69,19 @@ export class SendMessagePush extends SendMessageBase {
 
   @InstrumentUsecase()
   public async execute(command: SendMessageCommand) {
-    Sentry.addBreadcrumb({
+    addBreadcrumb({
       message: 'Sending Push',
     });
 
-    const step: NotificationStepEntity = command.step;
+    const { step } = command;
     const { subscriber, step: stepData } = command.compileContext;
 
     const template = await this.processVariants(command);
-    await this.initiateTranslations(command.environmentId, command.organizationId, subscriber.locale);
+    const i18nInstance = await this.initiateTranslations(
+      command.environmentId,
+      command.organizationId,
+      subscriber.locale
+    );
 
     if (template) {
       step.template = template;
@@ -91,19 +92,21 @@ export class SendMessagePush extends SendMessageBase {
     let title = '';
 
     try {
-      if (!command.chimeraData) {
+      if (!command.bridgeData) {
         content = await this.compileTemplate.execute(
           CompileTemplateCommand.create({
             template: step.template?.content as string,
             data,
-          })
+          }),
+          i18nInstance
         );
 
         title = await this.compileTemplate.execute(
           CompileTemplateCommand.create({
             template: step.template?.title as string,
             data,
-          })
+          }),
+          i18nInstance
         );
       }
     } catch (e) {
@@ -124,7 +127,7 @@ export class SendMessagePush extends SendMessageBase {
       return;
     }
 
-    const messagePayload = Object.assign({}, command.payload);
+    const messagePayload = { ...command.payload };
     delete messagePayload.attachments;
 
     let integrationsWithErrors = 0;
@@ -138,7 +141,7 @@ export class SendMessagePush extends SendMessageBase {
 
       // We avoid to send a message if subscriber has not an integration or if the subscriber has no device tokens for said integration
       if (!deviceTokens || !integration || isChannelMissingDeviceTokens) {
-        integrationsWithErrors++;
+        integrationsWithErrors += 1;
         continue;
       }
 
@@ -162,18 +165,22 @@ export class SendMessagePush extends SendMessageBase {
           stepData
         );
 
-        if (!result) {
-          integrationsWithErrors++;
+        if (!result.success) {
+          integrationsWithErrors += 1;
+
+          Logger.error(
+            { jobId: command.jobId },
+            [
+              `Error sending push notification for jobId ${command.jobId}`,
+              result.error.message || result.error.toString(),
+            ].join(' '),
+            LOG_CONTEXT
+          );
         }
       }
     }
 
     if (integrationsWithErrors > 0) {
-      Logger.error(
-        { jobId: command.jobId },
-        `There was an error sending the push notification(s) for the jobId ${command.jobId}`,
-        LOG_CONTEXT
-      );
       await this.sendNotificationError(command.job);
     }
   }
@@ -271,7 +278,9 @@ export class SendMessagePush extends SendMessageBase {
           ...(contextData?.raw && { raw: contextData.raw }),
         })
       );
-    } catch (error) {}
+    } catch (error) {
+      Logger.error(error, 'Error creating execution details error');
+    }
   }
 
   private async sendMessage(
@@ -284,19 +293,21 @@ export class SendMessagePush extends SendMessageBase {
     content: string,
     overrides: object,
     step: IPushOptions['step']
-  ): Promise<boolean> {
+  ): Promise<{ success: false; error: Error } | { success: true; error: undefined }> {
     try {
       const pushHandler = this.getIntegrationHandler(integration);
-      const chimeraOutputs = command.chimeraData?.outputs;
+      const bridgeOutputs = command.bridgeData?.outputs;
+      const bridgeProviderData = command.bridgeData?.providers?.[integration.providerId] || {};
 
       const result = await pushHandler.send({
         target: [deviceToken],
-        title: (chimeraOutputs as IChimeraPushResponse)?.subject || title,
-        content: (chimeraOutputs as IChimeraPushResponse)?.body || content,
+        title: (bridgeOutputs as PushOutput)?.subject || title,
+        content: (bridgeOutputs as PushOutput)?.body || content,
         payload: command.payload,
         overrides,
         subscriber,
         step,
+        bridgeProviderData,
       });
 
       await this.executionLogRoute.execute(
@@ -312,7 +323,7 @@ export class SendMessagePush extends SendMessageBase {
         })
       );
 
-      return true;
+      return { success: true, error: undefined };
     } catch (e) {
       await this.sendErrorStatus(
         message,
@@ -320,15 +331,14 @@ export class SendMessagePush extends SendMessageBase {
         'unexpected_push_error',
         e.message || e.name || 'Un-expect Push provider error',
         command,
-        LogCodeEnum.PUSH_ERROR,
-        e
+        LogCodeEnum.PUSH_ERROR
       );
 
       const raw = JSON.stringify(e) !== JSON.stringify({}) ? JSON.stringify(e) : JSON.stringify(e.message);
 
       await this.sendProviderError(command.job, message._id, raw);
 
-      return false;
+      return { success: false, error: e };
     }
   }
 
@@ -356,6 +366,7 @@ export class SendMessagePush extends SendMessageBase {
       overrides: overrides as never,
       providerId: integration.providerId,
       _jobId: command.jobId,
+      tags: command.tags,
     });
 
     await this.executionLogRoute.execute(

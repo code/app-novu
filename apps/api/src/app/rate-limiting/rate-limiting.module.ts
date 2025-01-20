@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { CommunityOrganizationRepository } from '@novu/dal';
 import { USE_CASES } from './usecases';
 import { SharedModule } from '../shared/shared.module';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { ApiRateLimitInterceptor } from './guards';
 
 @Module({
@@ -15,7 +16,7 @@ import { ApiRateLimitInterceptor } from './guards';
       },
     ]),
   ],
-  providers: [...USE_CASES, ApiRateLimitInterceptor],
+  providers: [...USE_CASES, ApiRateLimitInterceptor, CommunityOrganizationRepository],
   exports: [...USE_CASES, ApiRateLimitInterceptor],
 })
 export class RateLimitingModule {}

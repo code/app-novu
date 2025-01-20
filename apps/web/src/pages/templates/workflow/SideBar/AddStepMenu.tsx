@@ -1,8 +1,9 @@
 import styled from '@emotion/styled';
 import { Stack, Title } from '@mantine/core';
-import { When } from '../../../../components/utils/When';
 import { colors, DragButton, Tooltip } from '@novu/design-system';
-import { useEnvController } from '../../../../hooks';
+import { StepTypeEnum } from '@novu/shared';
+import { When } from '../../../../components/utils/When';
+import { useEnvironment } from '../../../../hooks';
 import { channels, NodeTypeEnum } from '../../../../utils/channels';
 import { TOP_ROW_HEIGHT } from '../WorkflowEditor';
 
@@ -13,7 +14,7 @@ export function AddStepMenu({
   setDragging: (value: ((prevState: boolean) => boolean) | boolean) => void;
   onDragStart: (event, nodeType) => void;
 }) {
-  const { readonly } = useEnvController();
+  const { readonly } = useEnvironment();
 
   return (
     <StyledNav data-test-id="drag-side-menu">
@@ -26,6 +27,7 @@ export function AddStepMenu({
         <Stack spacing={18} mb={16}>
           {channels
             .filter((channel) => channel.type === NodeTypeEnum.ACTION)
+            .filter((channel) => channel.channelType !== StepTypeEnum.CUSTOM)
             .map((channel, index) => (
               <DraggableNode key={index} channel={channel} setDragging={setDragging} onDragStart={onDragStart} />
             ))}

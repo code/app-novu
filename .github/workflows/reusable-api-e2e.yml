@@ -1,5 +1,8 @@
 name: E2E API Tests
 
+env:
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
 # Controls when the action will run. Triggers the workflow on push or pull request
 on:
   workflow_call:
@@ -11,6 +14,11 @@ on:
         type: boolean
       test-e2e-ee-affected:
         description: 'detect if we should run e2e-ee tests'
+        required: false
+        default: true
+        type: boolean
+      test-unit:
+        description: 'detect if we should run unit tests'
         required: false
         default: true
         type: boolean
@@ -27,7 +35,6 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   check_submodule_token:
-    if: ${{ inputs.ee }}
     name: Check if the secret exists or not.
     runs-on: ubuntu-latest
     outputs:
@@ -45,7 +52,6 @@ jobs:
   # This workflow contains a single job called "build"
   e2e_api:
     name: Test E2E
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
     timeout-minutes: 80
     permissions:
@@ -54,13 +60,9 @@ jobs:
       deployments: write
       id-token: write
     needs: [check_submodule_token]
-    if: |
-      ${{ contains (inputs.job-name,'-ee') && inputs.test-e2e-ee-affected == 'true' }} ||
-      ${{ !contains (inputs.job-name,'-ee') && inputs.test-e2e-affected == 'true' }}
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # checkout with submodules if token is provided
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         name: Checkout with submodules
         if: ${{ needs.check_submodule_token.outputs.has_token == 'true' && inputs.ee }}
         with:
@@ -68,7 +70,7 @@ jobs:
           token: ${{ secrets.SUBMODULES_TOKEN }}
 
       # else checkout without submodules if the token is not provided
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         name: Checkout
         if: ${{ needs.check_submodule_token.outputs.has_token != 'true' || !contains (inputs.job-name,'-ee') }}
 
@@ -77,47 +79,54 @@ jobs:
         with:
           submodules: ${{ inputs.ee && needs.check_submodule_token.outputs.has_token == 'true' }}
 
-      - uses: ./.github/actions/setup-redis-cluster
-        name: Setup redis cluster
-
-      - uses: mansagroup/nrwl-nx-action@v3
-        name: Run Lint
-        with:
-          targets: lint
-          projects: '@novu/api'
-
       - uses: ./.github/actions/start-localstack
         name: Start localstack
 
+      - name: Build API & Worker
+        run: CI='' pnpm run build:api_and_worker --skip-nx-cache
 
-      - uses: ./.github/actions/run-worker
-        name: Run worker
-        with:
-          launch_darkly_sdk_key: ${{ secrets.LAUNCH_DARKLY_SDK_KEY }}
+      - name: Start Worker
+        shell: bash
+        env:
+          LAUNCH_DARKLY_SDK_KEY: ${{ secrets.LAUNCH_DARKLY_SDK_KEY }}
+          NOVU_ENTERPRISE: ${{ inputs.ee }}
+        run: cd apps/worker && pnpm start:test &
 
-        # Runs a single command using the runners shell
-      - name: Build API
-        run: CI='' pnpm build:api --skip-nx-cache
+      - name: Wait on worker
+        shell: bash
+        run: wait-on --timeout=180000 http://127.0.0.1:1342/v1/health-check
 
-      - name: Run E2E tests
+      - name: Run Novu V1 E2E tests
+        if: ${{ !inputs.ee }}
         env:
           LAUNCH_DARKLY_SDK_KEY: ${{ secrets.LAUNCH_DARKLY_SDK_KEY }}
         run: |
-          cd apps/api && pnpm test:e2e
+          pnpm --filter @novu/api-service test:e2e:novu-v1
 
-      - name: Run E2E EE tests
+      - name: Run Novu V2 E2E tests
         if: ${{ needs.check_submodule_token.outputs.has_token == 'true' && inputs.ee }}
         env:
           LAUNCH_DARKLY_SDK_KEY: ${{ secrets.LAUNCH_DARKLY_SDK_KEY }}
-          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
-          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
           CI_EE_TEST: true
+          CLERK_ENABLED: true
+          CLERK_ISSUER_URL: ${{ vars.CLERK_ISSUER_URL }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_WEBHOOK_SECRET: ${{ secrets.CLERK_WEBHOOK_SECRET }}
+          CLERK_LONG_LIVED_TOKEN: ${{ secrets.CLERK_LONG_LIVED_TOKEN }}
         run: |
-          cd apps/api && pnpm test:e2e:ee
+          pnpm --filter @novu/api-service test:e2e:novu-v2
 
       - name: Kill port for worker 1342 for unit tests
         run: sudo kill -9 $(sudo lsof -t -i:1342)
 
+      # TODO: Run unit tests before e2e
       - name: Run unit tests
+        if: inputs.test-unit
         run: |
           cd apps/api && pnpm test
+
+      - name: Send Slack notifications
+        uses: ./.github/actions/slack-notify-on-failure
+        if: failure()
+        with:
+          slackWebhookURL: ${{ secrets.SLACK_WEBHOOK_URL_ENG_FEED_GITHUB }}

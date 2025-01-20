@@ -1,5 +1,5 @@
 import { Exclude } from 'class-transformer';
-import { ChannelTypeEnum, IMessageCTA, IActor } from '@novu/shared';
+import { ChannelTypeEnum, IActor, IMessageCTA } from '@novu/shared';
 
 import { IEmailBlock } from '../message-template';
 import { SubscriberEntity } from '../subscriber';
@@ -31,10 +31,13 @@ export class MessageEntity {
 
   template?: NotificationTemplateEntity;
 
-  templateIdentifier?: string;
+  templateIdentifier: string;
 
-  createdAt?: string;
-  expireAt?: string;
+  createdAt: string;
+
+  updatedAt: string;
+
+  archivedAt?: string;
 
   content: string | IEmailBlock[];
 
@@ -48,6 +51,10 @@ export class MessageEntity {
 
   read: boolean;
 
+  archived: boolean;
+
+  deleted: boolean;
+
   email?: string;
 
   phone?: string;
@@ -56,7 +63,7 @@ export class MessageEntity {
 
   directWebhookUrl?: string;
 
-  providerId?: string;
+  providerId: string;
 
   deviceTokens?: string[];
 
@@ -81,6 +88,8 @@ export class MessageEntity {
 
   payload: Record<string, unknown>;
 
+  data?: Record<string, unknown>;
+
   overrides: Record<string, unknown>;
 
   identifier?: string;
@@ -88,10 +97,14 @@ export class MessageEntity {
   actor?: IActor;
 
   _actorId?: string;
+
+  tags?: string[];
+
+  avatar?: string;
 }
 
 export type MessageDBModel = ChangePropsValueType<
-  Omit<MessageEntity, 'createdAt'>,
+  MessageEntity,
   | '_templateId'
   | '_environmentId'
   | '_messageTemplateId'
@@ -101,6 +114,4 @@ export type MessageDBModel = ChangePropsValueType<
   | '_subscriberId'
   | '_feedId'
   | '_actorId'
-> & {
-  createdAt?: Date;
-};
+>;

@@ -1,6 +1,6 @@
 import { IconOutlineMenuBook } from '@novu/design-system';
 import { FC } from 'react';
-import { css } from '../../../styled-system/css';
+import { css } from '@novu/novui/css';
 import { Text } from './WebhookPage.shared';
 
 export const WebhookAdditionalInformationLink: FC = () => {
@@ -12,7 +12,7 @@ export const WebhookAdditionalInformationLink: FC = () => {
         justifyContent: 'flex-start',
         gap: '50',
       })}
-      href="https://docs.novu.co/platform/inbound-parse-webhook"
+      href="https://v0.x-docs.novu.co/platform/inbound-parse-webhook"
       target="_blank"
       rel="noopener noreferrer"
     >

@@ -1,5 +1,5 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
-import { EnvironmentRepository, OrganizationRepository } from '@novu/dal';
+import { CommunityOrganizationRepository, EnvironmentRepository } from '@novu/dal';
 import { buildMaximumApiRateLimitKey, CachedEntity, InstrumentUsecase } from '@novu/application-generic';
 import { ApiRateLimitCategoryEnum, ApiServiceLevelEnum, IApiRateLimitMaximum } from '@novu/shared';
 import { GetApiRateLimitMaximumCommand } from './get-api-rate-limit-maximum.command';
@@ -12,7 +12,7 @@ const LOG_CONTEXT = 'GetApiRateLimit';
 export class GetApiRateLimitMaximum {
   constructor(
     private environmentRepository: EnvironmentRepository,
-    private organizationRepository: OrganizationRepository,
+    private organizationRepository: CommunityOrganizationRepository,
     private getDefaultApiRateLimits: GetApiRateLimitServiceMaximumConfig
   ) {}
 
@@ -55,7 +55,7 @@ export class GetApiRateLimitMaximum {
       apiServiceLevel = CUSTOM_API_SERVICE_LEVEL;
       apiRateLimits = environment.apiRateLimits;
     } else {
-      const organization = await this.organizationRepository.findOne({ _id: _organizationId });
+      const organization = await this.organizationRepository.findById(_organizationId);
 
       if (!organization) {
         const message = `Organization id: ${_organizationId} not found`;

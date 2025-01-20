@@ -25,6 +25,8 @@ export class SubscriberEntity {
 
   channels?: IChannelSettings[];
 
+  topics?: string[];
+
   _organizationId: OrganizationId;
 
   _environmentId: EnvironmentId;
@@ -55,6 +57,7 @@ export class IChannelSettings {
 }
 
 export class IChannelCredentials {
+  phoneNumber?: string;
   webhookUrl?: string;
   channel?: string;
   deviceTokens?: string[];

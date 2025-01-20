@@ -1,5 +1,8 @@
 name: Deploy Widget to Netlify
 
+env:
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
 # Controls when the action will run. Triggers the workflow on push or pull request
 on:
   workflow_call:
@@ -36,7 +39,6 @@ on:
         required: true
         type: string
 
-
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   reusable_widget_deploy:
@@ -49,7 +51,7 @@ jobs:
       deployments: write
       id-token: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-project
         with:
           slim: 'true'

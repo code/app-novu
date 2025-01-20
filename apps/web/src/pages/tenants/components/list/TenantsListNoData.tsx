@@ -1,7 +1,7 @@
 import styled from '@emotion/styled';
 
 import { Buildings, colors } from '@novu/design-system';
-import { useEnvController } from '../../../../hooks';
+import { useEnvironment } from '../../../../hooks';
 import { When } from '../../../../components/utils/When';
 
 const NoDataHolder = styled.div`
@@ -21,11 +21,11 @@ const NoDataText = styled.h2`
 `;
 
 export const TenantsListNoData = () => {
-  const { environment, isLoading } = useEnvController();
+  const { environment, isLoaded } = useEnvironment();
   const environmentName = environment?.name?.toLowerCase();
 
   return (
-    <When truthy={!isLoading}>
+    <When truthy={isLoaded}>
       <NoDataHolder data-test-id="no-tenant-placeholder">
         <Buildings style={{ color: colors.B30, width: '50px', height: '45px', margin: '30px' }} />
         <NoDataText>Add the first tenant for the</NoDataText>

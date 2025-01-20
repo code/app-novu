@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from '@emotion/styled';
 
+import { Button, Tabs } from '@novu/design-system';
 import PageHeader from '../../components/layout/components/PageHeader';
 import PageContainer from '../../components/layout/components/PageContainer';
-import { Button, Tabs } from '@novu/design-system';
-import { useEnvController, usePromotedChanges, useUnPromotedChanges } from '../../hooks';
+import { useEnvironment, usePromotedChanges, useUnPromotedChanges } from '../../hooks';
 import { ChangesTable } from './components/ChangesTableLayout';
 import { bulkPromoteChanges } from '../../api/changes';
 import { QueryKeys } from '../../api/query.keys';
 import { errorMessage, successMessage } from '../../utils/notifications';
-import { ROUTES } from '../../constants/routes.enum';
+import { ROUTES } from '../../constants/routes';
 
 const PENDING = 'Pending';
 const HISTORY = 'History';
@@ -19,7 +19,7 @@ const HISTORY = 'History';
 export function PromoteChangesPage() {
   const [page, setPage] = useState<number>(0);
   const navigate = useNavigate();
-  const { readonly } = useEnvController();
+  const { readonly } = useEnvironment();
 
   const { changes, isLoadingChanges, changesPageSize, totalChangesCount } = useUnPromotedChanges(page);
   const { history, isLoadingHistory, historyPageSize, totalHistoryCount } = usePromotedChanges(page);

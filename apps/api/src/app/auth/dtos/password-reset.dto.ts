@@ -1,5 +1,6 @@
-import { IsDefined, MinLength, Matches, MaxLength, IsUUID } from 'class-validator';
+import { IsDefined, MinLength, Matches, MaxLength, IsUUID, IsEmail } from 'class-validator';
 import { passwordConstraints } from '@novu/shared';
+
 export class PasswordResetBodyDto {
   @IsDefined()
   @MinLength(passwordConstraints.minLength)
@@ -16,4 +17,10 @@ export class PasswordResetBodyDto {
     message: 'Bad token provided',
   })
   token: string;
+}
+
+export class PasswordResetRequestBodyDto {
+  @IsDefined()
+  @IsEmail()
+  email: string;
 }

@@ -1,10 +1,10 @@
-import * as mongoose from 'mongoose';
-import { IndexOptions, Schema } from 'mongoose';
-import * as mongooseDelete from 'mongoose-delete';
+import mongoose, { IndexOptions, Schema } from 'mongoose';
 
 import { schemaOptions } from '../schema-default.options';
 import { SubscriberDBModel, SubscriberEntity } from './subscriber.entity';
 import { IndexDefinition } from '../../shared/types';
+
+const mongooseDelete = require('mongoose-delete');
 
 const subscriberSchema = new Schema<SubscriberDBModel>(
   {
@@ -175,7 +175,7 @@ subscriberSchema.index({
  *
  * We can not add `deleted` field to the index the client wont be able to delete twice subscriber with the same subscriberId.
  */
-index(
+subscriberSchema.index(
   {
     subscriberId: 1,
     _environmentId: 1,
@@ -183,9 +183,18 @@ index(
   { unique: true }
 );
 
+subscriberSchema.index({
+  _organizationId: 1,
+});
+
+subscriberSchema.index({
+  _environmentId: 1,
+  _organizationId: 1,
+  deleted: 1,
+});
+
 subscriberSchema.plugin(mongooseDelete, { deletedAt: true, deletedBy: true, overrideMethods: 'all' });
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const Subscriber =
   (mongoose.models.Subscriber as mongoose.Model<SubscriberDBModel>) ||
   mongoose.model<SubscriberDBModel>('Subscriber', subscriberSchema);

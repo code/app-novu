@@ -6,7 +6,7 @@ import { ChannelTypeEnum } from '@novu/shared';
 import { UpdateSubscriberPreferenceRequestDto } from '../dtos/update-subscriber-preference-request.dto';
 import { getSubscriberPreference } from './get-subscriber-preference.e2e';
 
-describe('PATCH /widgets/preferences/:templateId', function () {
+describe('PATCH /widgets/preferences/:templateId #novu-v1', function () {
   let template: NotificationTemplateEntity;
   let session: UserSession;
   let subscriberId: string;
@@ -21,7 +21,8 @@ describe('PATCH /widgets/preferences/:templateId', function () {
     });
   });
 
-  it('should create user preference', async function () {
+  // `enabled` flag is not used anymore. The presence of a preference object means that the subscriber has enabled notifications.
+  it.skip('should create user preference', async function () {
     const updateData = {
       enabled: false,
     };

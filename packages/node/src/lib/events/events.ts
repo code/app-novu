@@ -18,6 +18,7 @@ export class Events extends WithHttp implements IEvents {
       overrides: data.overrides || {},
       ...(data.actor && { actor: data.actor }),
       ...(data.tenant && { tenant: data.tenant }),
+      ...(data.bridgeUrl && { bridgeUrl: data.bridgeUrl }),
     });
   }
 

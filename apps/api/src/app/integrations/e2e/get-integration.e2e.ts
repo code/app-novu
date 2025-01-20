@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { ChannelTypeEnum, EmailProviderIdEnum, SmsProviderIdEnum } from '@novu/shared';
 import { IntegrationEntity } from '@novu/dal';
 
-describe('Get Integrations - /integrations (GET)', function () {
+describe('Get Integrations - /integrations (GET) #novu-v2', function () {
   let session: UserSession;
 
   beforeEach(async () => {
@@ -68,7 +68,7 @@ describe('Get Integrations - /integrations (GET)', function () {
     const activeEmailIntegrations = activeIntegrations
       .filter(
         (integration) =>
-          integration.channel == ChannelTypeEnum.EMAIL && integration._environmentId === session.environment._id
+          integration.channel === ChannelTypeEnum.EMAIL && integration._environmentId === session.environment._id
       )
       .filter((integration) => integration.providerId !== EmailProviderIdEnum.Novu);
 

@@ -7,7 +7,10 @@ import { ParseEventRequest, ParseEventRequestBroadcastCommand } from '../parse-e
 
 @Injectable()
 export class TriggerEventToAll {
-  constructor(private subscriberRepository: SubscriberRepository, private parseEventRequest: ParseEventRequest) {}
+  constructor(
+    private subscriberRepository: SubscriberRepository,
+    private parseEventRequest: ParseEventRequest
+  ) {}
 
   public async execute(command: TriggerEventToAllCommand) {
     await this.parseEventRequest.execute(
@@ -23,6 +26,7 @@ export class TriggerEventToAll {
         actor: command.actor,
         tenant: command.tenant,
         requestCategory: TriggerRequestCategoryEnum.SINGLE,
+        bridgeUrl: command.bridgeUrl,
       })
     );
 

@@ -1,4 +1,5 @@
-import * as i18next from 'i18next';
+/* eslint-disable global-require */
+import i18next from 'i18next';
 import { ModuleRef } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { format } from 'date-fns';
@@ -9,6 +10,8 @@ import {
   ExecutionDetailsSourceEnum,
   ExecutionDetailsStatusEnum,
   IMessageTemplate,
+  ITenantDefine,
+  ProvidersIdEnum,
   SmsProviderIdEnum,
 } from '@novu/shared';
 
@@ -23,7 +26,6 @@ import {
   ExecutionLogRouteCommand,
 } from '@novu/application-generic';
 import { SendMessageType } from './send-message-type.usecase';
-import { CreateLog } from '../../../shared/logs';
 import { PlatformException } from '../../../shared/utils';
 import { SendMessageCommand } from './send-message.command';
 
@@ -31,7 +33,6 @@ export abstract class SendMessageBase extends SendMessageType {
   abstract readonly channelType: ChannelTypeEnum;
   protected constructor(
     protected messageRepository: MessageRepository,
-    protected createLogUsecase: CreateLog,
     protected executionLogRoute: ExecutionLogRoute,
     protected subscriberRepository: SubscriberRepository,
     protected selectIntegration: SelectIntegration,
@@ -39,13 +40,22 @@ export abstract class SendMessageBase extends SendMessageType {
     protected selectVariant: SelectVariant,
     protected moduleRef: ModuleRef
   ) {
-    super(messageRepository, createLogUsecase, executionLogRoute);
+    super(messageRepository, executionLogRoute);
   }
 
-  protected async getIntegration(
-    selectIntegrationCommand: SelectIntegrationCommand
-  ): Promise<IntegrationEntity | undefined> {
-    const integration = await this.selectIntegration.execute(SelectIntegrationCommand.create(selectIntegrationCommand));
+  protected async getIntegration(params: {
+    id?: string;
+    providerId?: ProvidersIdEnum;
+    identifier?: string;
+    organizationId: string;
+    environmentId: string;
+    channelType: ChannelTypeEnum;
+    userId: string;
+    filterData: {
+      tenant: ITenantDefine | undefined;
+    };
+  }): Promise<IntegrationEntity | undefined> {
+    const integration = await this.selectIntegration.execute(SelectIntegrationCommand.create(params));
 
     if (!integration) {
       return;
@@ -57,7 +67,7 @@ export abstract class SendMessageBase extends SendMessageType {
         providerId: integration.providerId,
         environmentId: integration._environmentId,
         organizationId: integration._organizationId,
-        userId: selectIntegrationCommand.userId,
+        userId: params.userId,
       });
     }
 
@@ -149,7 +159,7 @@ export abstract class SendMessageBase extends SendMessageType {
           organizationId
         );
 
-        await i18next.init({
+        const instance = i18next.createInstance({
           resources,
           ns: namespaces,
           defaultNS: false,
@@ -159,8 +169,8 @@ export abstract class SendMessageBase extends SendMessageType {
           fallbackLng: defaultLocale || 'en',
           interpolation: {
             formatSeparator: ',',
-            format: function (value, formatting, lng) {
-              if (value && formatting && !isNaN(Date.parse(value))) {
+            format(value, formatting, lng) {
+              if (value && formatting && !Number.isNaN(Date.parse(value))) {
                 return format(new Date(value), formatting);
               }
 
@@ -168,6 +178,10 @@ export abstract class SendMessageBase extends SendMessageType {
             },
           },
         });
+
+        await instance.init();
+
+        return instance;
       }
     } catch (e) {
       Logger.error(e, `Unexpected error while importing enterprise modules`, 'TranslationsService');

@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PreferenceChannels } from '../../shared/dtos/preference-channels';
 import {
   INotificationTrigger,
   INotificationTriggerVariable,
@@ -9,6 +8,7 @@ import {
   TriggerContextTypeEnum,
   TriggerTypeEnum,
 } from '@novu/shared';
+import { PreferenceChannels } from '../../shared/dtos/preference-channels';
 
 class Preference {
   @ApiProperty({
@@ -39,7 +39,7 @@ export class NotificationTriggerVariableResponse implements INotificationTrigger
 
   @ApiPropertyOptional()
   @ApiProperty({
-    type: TemplateVariableTypeEnum,
+    enum: TemplateVariableTypeEnum,
     description: 'The type of the variable',
   })
   type?: TemplateVariableTypeEnum;
@@ -47,7 +47,7 @@ export class NotificationTriggerVariableResponse implements INotificationTrigger
 
 export class TriggerReservedVariableResponse implements ITriggerReservedVariable {
   @ApiProperty({
-    type: TriggerContextTypeEnum,
+    enum: TriggerContextTypeEnum,
     description: 'The type of the reserved variable',
   })
   type: TriggerContextTypeEnum;
@@ -61,7 +61,8 @@ export class TriggerReservedVariableResponse implements ITriggerReservedVariable
 
 export class NotificationTriggerResponse implements INotificationTrigger {
   @ApiProperty({
-    type: TriggerTypeEnum,
+    enum: [...Object.values(TriggerTypeEnum)],
+    enumName: 'TriggerTypeEnum',
     description: 'The type of the trigger',
   })
   type: TriggerTypeEnum;
@@ -73,21 +74,21 @@ export class NotificationTriggerResponse implements INotificationTrigger {
   identifier: string;
 
   @ApiProperty({
-    type: Array<NotificationTriggerVariableResponse>,
+    type: [NotificationTriggerVariableResponse],
     description: 'The variables of the trigger',
   })
   variables: NotificationTriggerVariableResponse[];
 
   @ApiPropertyOptional()
   @ApiProperty({
-    type: Array<NotificationTriggerVariableResponse>,
+    type: [NotificationTriggerVariableResponse],
     description: 'The subscriber variables of the trigger',
   })
   subscriberVariables?: NotificationTriggerVariableResponse[];
 
   @ApiPropertyOptional()
   @ApiProperty({
-    type: Array<TriggerReservedVariableResponse>,
+    type: [TriggerReservedVariableResponse],
     description: 'The reserved variables of the trigger',
   })
   reservedVariables?: TriggerReservedVariableResponse[];
@@ -115,11 +116,10 @@ class TemplateResponse implements ITemplateConfiguration {
 
   @ApiProperty({
     description: 'Triggers are the events that will trigger the workflow.',
-    type: Array<NotificationTriggerResponse>,
+    type: [NotificationTriggerResponse], // Use an array syntax
   })
   triggers: NotificationTriggerResponse[];
 }
-
 export class UpdateSubscriberPreferenceResponseDto {
   @ApiProperty({
     type: TemplateResponse,
@@ -127,6 +127,13 @@ export class UpdateSubscriberPreferenceResponseDto {
   })
   template: TemplateResponse;
 
+  @ApiProperty({
+    type: Preference,
+    description: 'The preferences of the subscriber regarding the related workflow',
+  })
+  preference: Preference;
+}
+export class UpdateSubscriberPreferenceGlobalResponseDto {
   @ApiProperty({
     type: Preference,
     description: 'The preferences of the subscriber regarding the related workflow',

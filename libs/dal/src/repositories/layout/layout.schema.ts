@@ -1,9 +1,9 @@
-import * as mongoose from 'mongoose';
-import * as mongooseDelete from 'mongoose-delete';
-import { Schema } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 import { LayoutDBModel } from './layout.entity';
 import { schemaOptions } from '../schema-default.options';
+
+const mongooseDelete = require('mongoose-delete');
 
 const layoutSchema = new Schema<LayoutDBModel>(
   {
@@ -55,6 +55,9 @@ const layoutSchema = new Schema<LayoutDBModel>(
 
 layoutSchema.plugin(mongooseDelete, { deletedAt: true, deletedBy: true, overrideMethods: 'all' });
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
+layoutSchema.index({
+  _environmentId: 1,
+});
+
 export const Layout =
   (mongoose.models.Layout as mongoose.Model<LayoutDBModel>) || mongoose.model<LayoutDBModel>('Layout', layoutSchema);

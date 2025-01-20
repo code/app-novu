@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IEmailBlock } from '@novu/shared';
-
 import { useGetLocalesFromContent } from '../../../api/hooks';
-import { useAuthController } from '../../../hooks';
+import { useGetDefaultLocale } from '../../../ee/translations/hooks';
 
 export const useTemplateLocales = ({
   content,
@@ -13,7 +12,7 @@ export const useTemplateLocales = ({
   title?: string;
   disabled?: boolean;
 }) => {
-  const { organization } = useAuthController();
+  const { defaultLocale } = useGetDefaultLocale();
   const [selectedLocale, setSelectedLocale] = useState('');
 
   const { data: locales, isLoading: areLocalesLoading, getLocalesFromContent } = useGetLocalesFromContent();
@@ -41,5 +40,10 @@ export const useTemplateLocales = ({
     setSelectedLocale(locale);
   };
 
-  return { locales, areLocalesLoading, selectedLocale: selectedLocale || organization?.defaultLocale, onLocaleChange };
+  return {
+    locales,
+    areLocalesLoading,
+    selectedLocale: selectedLocale || defaultLocale,
+    onLocaleChange,
+  };
 };

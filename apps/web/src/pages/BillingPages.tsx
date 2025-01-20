@@ -1,16 +1,10 @@
-import { IS_DOCKER_HOSTED } from '../config';
+import { IS_SELF_HOSTED } from '../config';
+import { Routes } from '../ee/billing';
 
 export const BillingRoutes = () => {
-  if (IS_DOCKER_HOSTED) {
+  if (IS_SELF_HOSTED) {
     return null;
   }
 
-  try {
-    const module = require('@novu/ee-billing-web');
-    const Routes = module.Routes;
-
-    return <Routes />;
-  } catch (e) {}
-
-  return null;
+  return <Routes />;
 };

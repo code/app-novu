@@ -1,13 +1,14 @@
 import axios, { AxiosResponse } from 'axios';
 import { Test, TestingModule } from '@nestjs/testing';
 import { expect } from 'chai';
-import * as sinon from 'sinon';
+import sinon from 'sinon';
 
 import { JobRepository, MessageRepository } from '@novu/dal';
 import { CompileTemplate } from '@novu/application-generic';
 
 import { InboundEmailParse, IUserWebhookPayload } from '../usecases/inbound-email-parse/inbound-email-parse.usecase';
 import { InboundEmailParseCommand } from '../usecases/inbound-email-parse/inbound-email-parse.command';
+
 const axiosInstance = axios.create();
 
 const eventTriggerPath = '/v1/events/trigger';
@@ -43,7 +44,7 @@ describe('Should handle the new arrived mail', () => {
 
     sinon.assert.calledOnce(axiosPostStub);
     axiosPostStub.calledWith(sinon.match.array);
-    const args = axiosPostStub.getCall(0).args;
+    const { args } = axiosPostStub.getCall(0);
 
     const webhook: string = args[0];
     const payload: IUserWebhookPayload = args[1];
@@ -121,10 +122,10 @@ describe('Should handle the new arrived mail', () => {
     const toMetaIds = user.split('+')[1];
     const [mailTransactionId, mailEnvironmentId] = toMetaIds.split(userNameDelimiter);
 
-    const parsedTransactionId = skipTransactionId ? '' : transactionId ? transactionId : mailTransactionId;
+    const parsedTransactionId = skipTransactionId ? '' : transactionId || mailTransactionId;
 
-    mail.to[0].address = `parse+${parsedTransactionId}-nv-e=${environmentId ? environmentId : mailTransactionId}@${
-      userDomain ? userDomain : USER_MAIL_DOMAIN
+    mail.to[0].address = `parse+${parsedTransactionId}-nv-e=${environmentId || mailTransactionId}@${
+      userDomain || USER_MAIL_DOMAIN
     }`;
 
     return mail;
@@ -175,7 +176,6 @@ const getEntitiesStubObject = {
       organizationName: 'Umbrella Corp',
       compiledVariable: 'test-env',
     },
-    expireAt: '2024-01-16T09:41:20.863Z',
     createdAt: '2023-12-17T09:41:20.863Z',
     updatedAt: '2023-12-17T09:41:20.863Z',
     __v: 0,
@@ -267,7 +267,6 @@ const getEntitiesStubObject = {
     },
     type: 'email',
     providerId: 'sendgrid',
-    expireAt: '2024-01-16T09:41:20.863Z',
     createdAt: '2023-12-17T09:41:20.866Z',
     __v: 0,
     updatedAt: '2023-12-17T09:41:20.978Z',
@@ -300,7 +299,6 @@ const getEntitiesStubObject = {
       organizationName: 'Umbrella Corp',
       compiledVariable: 'test-env',
     },
-    expireAt: '2024-01-16T09:41:20.940Z',
     deleted: false,
     createdAt: '2023-12-17T09:41:20.940Z',
     updatedAt: '2023-12-17T09:41:20.970Z',

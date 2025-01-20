@@ -1,33 +1,35 @@
-import { DalService } from '@novu/dal';
 import { testServer } from '@novu/testing';
-import * as sinon from 'sinon';
-import * as chai from 'chai';
-
+import sinon from 'sinon';
+import chai from 'chai';
+import { connection, default as mongoose } from 'mongoose';
 import { bootstrap } from '../src/bootstrap';
 
-const dalService = new DalService();
+async function dropDatabase() {
+  try {
+    await mongoose.connect(process.env.MONGO_URL);
+    await mongoose.connection.db.dropDatabase();
+  } catch (error) {
+    console.error('Error dropping the database:', error);
+  } finally {
+    await mongoose.disconnect();
+  }
+}
 
 before(async () => {
   /**
    * disable truncating for better error messages - https://www.chaijs.com/guide/styles/#configtruncatethreshold
    */
   chai.config.truncateThreshold = 0;
+  await dropDatabase();
   await testServer.create(await bootstrap());
-  await dalService.connect(process.env.MONGO_URL);
 });
 
 after(async () => {
   await testServer.teardown();
-
-  try {
-    await dalService.destroy();
-  } catch (e) {
-    if (e.code !== 12586) {
-      throw e;
-    }
-  }
+  await dropDatabase();
 });
 
+// TODO: Remove this
 afterEach(() => {
   sinon.restore();
 });

@@ -6,7 +6,9 @@
       <script value="start:dev" />
     </scripts>
     <node-interpreter value="project" />
-    <envs />
+    <envs>
+      <env name="NOVU_SECRET_KEY" value="''" />
+    </envs>
     <method v="2" />
   </configuration>
 </component>

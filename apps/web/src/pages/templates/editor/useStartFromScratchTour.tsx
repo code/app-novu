@@ -1,7 +1,6 @@
 import { Step } from 'react-joyride';
 import { useParams } from 'react-router-dom';
-import { useAuthContext } from '../../../components/providers/AuthProvider';
-import { useEffectOnce } from '../../../hooks';
+import { useAuth, useEffectOnce } from '../../../hooks';
 import { useTourStorage } from '../hooks/useTourStorage';
 import { StartFromScratchTourTooltip } from './StartFromScratchTourTooltip';
 
@@ -63,7 +62,7 @@ const StartFromScratchTourSteps: Step[] = [
 ];
 
 export const useStartFromScratchTour = ({ startTour }: { startTour: () => void }) => {
-  const { currentUser } = useAuthContext();
+  const { currentUser } = useAuth();
 
   const tourStorage = useTourStorage();
   const { templateId = '' } = useParams<{ templateId: string }>();

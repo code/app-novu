@@ -6,14 +6,14 @@ import { colors, Input, inputStyles } from '@novu/design-system';
 import { IntervalSelect } from './digest/IntervalSelect';
 import { BackOffFields } from './digest/BackOffFields';
 import { useStepFormPath } from '../hooks/useStepFormPath';
-import { useEnvController } from '../../../hooks';
+import { useEnvironment } from '../../../hooks';
 import { useTemplateEditorForm } from '../components/TemplateEditorFormProvider';
 
-const amountDefaultValue = '5';
+const amountDefaultValue = '30';
 
 export const RegularDigestMetadata = () => {
   const { template } = useTemplateEditorForm();
-  const { readonly } = useEnvController({}, template?.chimera);
+  const { readonly } = useEnvironment({ bridge: template?.bridge });
   const {
     control,
     formState: { errors, isSubmitted },

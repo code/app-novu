@@ -5,7 +5,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useNavigate } from 'react-router-dom';
 import { Button, colors, shadows, Close } from '@novu/design-system';
 import { faFile } from '@fortawesome/free-regular-svg-icons';
-import { INotificationTemplateStep } from '@novu/shared';
+
+import { INotificationTemplateStep, WorkflowCreationSourceEnum } from '@novu/shared';
 
 import {
   CanvasHolder,
@@ -23,19 +24,17 @@ import {
   TemplateDescription,
   useStyles,
 } from './templateStoreStyles';
-import { IBlueprintsGrouped } from '../../../../api/hooks';
+import { IBlueprintsGrouped, useCreateTemplateFromBlueprint } from '../../../../api/hooks';
 import { TriggerNode } from './TriggerNode';
 import { ChannelNode } from './ChannelNode';
 import { FlowEditor } from '../../../../components/workflow';
-import { useCreateTemplateFromBlueprint } from '../../../../api/hooks';
 import { errorMessage } from '../../../../utils/notifications';
 import { parseUrl } from '../../../../utils/routeUtils';
-import { ROUTES } from '../../../../constants/routes.enum';
-import { TemplateCreationSourceEnum } from '../../shared';
+import { ROUTES } from '../../../../constants/routes';
 import { useSegment } from '../../../../components/providers/SegmentProvider';
 import { IBlueprintTemplate } from '../../../../api/types';
 import { TemplateAnalyticsEnum } from '../../constants';
-import { EchoProjectModalItem } from '../EchoProjectWaitList';
+import { FrameworkProjectModalItem } from '../FrameworkProjectWaitList';
 
 const nodeTypes = {
   triggerNode: TriggerNode,
@@ -69,7 +68,7 @@ export const TemplatesStoreModal = ({ general, popular, isOpened, onClose }: ITe
   const handleTemplateClick = (template: IBlueprintTemplate) => {
     segment.track('[Template Store] Click Notification Template', {
       templateIdentifier: template.triggers[0]?.identifier,
-      location: TemplateCreationSourceEnum.TEMPLATE_STORE,
+      location: WorkflowCreationSourceEnum.TEMPLATE_STORE,
     });
 
     setTemplate(template);
@@ -83,12 +82,12 @@ export const TemplatesStoreModal = ({ general, popular, isOpened, onClose }: ITe
   const handleCreateTemplateClick = (blueprint: IBlueprintTemplate) => {
     segment.track('[Template Store] Click Create Notification Template', {
       templateIdentifier: blueprint.triggers[0]?.identifier,
-      location: TemplateCreationSourceEnum.TEMPLATE_STORE,
+      location: WorkflowCreationSourceEnum.TEMPLATE_STORE,
     });
 
     createTemplateFromBlueprint({
-      blueprint: blueprint,
-      params: { __source: TemplateCreationSourceEnum.TEMPLATE_STORE },
+      blueprint,
+      params: { __source: WorkflowCreationSourceEnum.TEMPLATE_STORE },
     });
   };
 
@@ -118,7 +117,7 @@ export const TemplatesStoreModal = ({ general, popular, isOpened, onClose }: ITe
               onClick={() => {
                 segment.track('[Template Store] Click Create Notification Template', {
                   templateIdentifier: 'Blank Workflow',
-                  location: TemplateCreationSourceEnum.DROPDOWN,
+                  location: WorkflowCreationSourceEnum.DROPDOWN,
                 });
                 handleRedirectToCreateBlankTemplate(false);
               }}
@@ -126,7 +125,7 @@ export const TemplatesStoreModal = ({ general, popular, isOpened, onClose }: ITe
               <FontAwesomeIcon icon={faFile} />
               <span>Blank Workflow</span>
             </TemplateItem>
-            <EchoProjectModalItem />
+            <FrameworkProjectModalItem />
           </TemplatesGroup>
 
           {popular.map((group) => (

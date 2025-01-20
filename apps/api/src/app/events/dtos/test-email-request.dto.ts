@@ -29,7 +29,7 @@ export class TestSendEmailRequestDto {
 
   @IsOptional()
   @IsBoolean()
-  chimera?: boolean = false;
+  bridge?: boolean = false;
 
   @IsOptional()
   @IsString()
@@ -40,5 +40,5 @@ export class TestSendEmailRequestDto {
   workflowId?: string | null;
 
   @IsOptional()
-  inputs: any;
+  controls: any;
 }

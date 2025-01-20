@@ -4,8 +4,7 @@ import { UTM_CAMPAIGN_QUERY_PARAM } from '@novu/shared';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useAuthContext } from '@novu/shared-web';
-import { ROUTES } from '../../constants/routes.enum';
+import { ROUTES } from '../../constants/routes';
 import useThemeChange from '../../hooks/useThemeChange';
 import { useSpotlightContext } from '../providers/SpotlightProvider';
 import useStyles from './Spotlight.styles';
@@ -13,9 +12,8 @@ import useStyles from './Spotlight.styles';
 export const SpotLight = ({ children }) => {
   const navigate = useNavigate();
   const { items, addItem } = useSpotlightContext();
-  const { logout } = useAuthContext();
-  const { themeIcon, toggleColorScheme } = useThemeChange();
-  const { classes, theme } = useStyles();
+  const { toggleColorScheme, Icon } = useThemeChange();
+  const { classes } = useStyles();
 
   useEffect(() => {
     addItem([
@@ -86,21 +84,13 @@ export const SpotLight = ({ children }) => {
       {
         id: 'toggle-theme',
         title: 'Toggle Theme',
-        icon: themeIcon,
+        icon: <Icon title="color-scheme-preference-icon" />,
         onTrigger: () => {
           toggleColorScheme();
         },
       },
-      {
-        id: 'sign-out',
-        title: 'Sign out',
-        icon: <IconLogout />,
-        onTrigger: () => {
-          logout();
-        },
-      },
     ]);
-  }, [navigate, addItem, themeIcon, toggleColorScheme, logout]);
+  }, [navigate, addItem, Icon, toggleColorScheme]);
 
   return (
     <SpotlightProvider limit={7} shortcut={['mod + K']} actions={items} classNames={classes}>

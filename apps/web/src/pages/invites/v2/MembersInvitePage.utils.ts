@@ -1,5 +1,5 @@
 import { IUserEntity } from '@novu/shared';
-import { ROUTES } from '@novu/shared-web';
+import { ROUTES } from '../../../constants/routes';
 import { parseUrl } from '../../../utils/routeUtils';
 
 export const buildInviteHref = ({
@@ -10,7 +10,7 @@ export const buildInviteHref = ({
 }: {
   invitedMemberEmail: string;
   organizationName?: string;
-  currentUser?: IUserEntity;
+  currentUser?: IUserEntity | null;
   copyLink: string;
 }) => {
   const mailTo = `mailto:${invitedMemberEmail}`;
@@ -24,5 +24,5 @@ export const buildInviteHref = ({
 };
 
 export const generateInviteLink = (memberToken: string) => {
-  return `${window.location.origin.toString()}` + parseUrl(ROUTES.AUTH_INVITATION_TOKEN, { token: memberToken });
+  return `${window.location.origin.toString()}${parseUrl(ROUTES.AUTH_INVITATION_TOKEN, { token: memberToken })}`;
 };

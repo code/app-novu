@@ -2,7 +2,6 @@ import { css } from '@emotion/css';
 import styled from '@emotion/styled';
 import { createStyles, MantineTheme } from '@mantine/core';
 import { FeatureFlagsKeysEnum } from '@novu/shared';
-import { useFeatureFlag } from '@novu/shared-web';
 import { colors, shadows } from '../config';
 import { NAVIGATION_WIDTH, LEGACY_NAVIGATION_WIDTH, COLLAPSED_WIDTH } from './Sidebar.const';
 import { ISidebarBaseProps } from './Sidebar.types';
@@ -15,9 +14,20 @@ export const HeaderHolder = styled.div`
   margin-bottom: 0;
 `;
 
-export const scrollable = css`
+const scrollable = `
   overflow-x: hidden;
   overflow-y: auto;
+`;
+
+export const scrollableClass = css(scrollable);
+
+export const Form = styled.form<{ isParentScrollable: boolean }>`
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  ${(props) => props.isParentScrollable && scrollable};
 `;
 
 export const BodyHolder = styled.div<{ isParentScrollable: boolean }>`
@@ -41,13 +51,10 @@ export const FooterHolder = styled.div`
 `;
 
 export const useDrawerStyles = createStyles(
-  (theme: MantineTheme, { isExpanded }: Pick<ISidebarBaseProps, 'isExpanded'>) => {
-    /**
-     * TODO: Remove this feature flag and navigationWidth once the information architecture is enabled for all users
-     */
-    const isInformationArchitectureEnabled = useFeatureFlag(FeatureFlagsKeysEnum.IS_INFORMATION_ARCHITECTURE_ENABLED);
-    const navigationWidth = isInformationArchitectureEnabled ? NAVIGATION_WIDTH : LEGACY_NAVIGATION_WIDTH;
-
+  (
+    theme: MantineTheme,
+    { isExpanded, navigationWidth = NAVIGATION_WIDTH }: Pick<ISidebarBaseProps, 'isExpanded' | 'navigationWidth'>
+  ) => {
     return {
       root: {
         position: 'absolute',

@@ -3,9 +3,9 @@ import { format, parseISO } from 'date-fns';
 import styled from '@emotion/styled';
 import { StepTypeEnum, DelayTypeEnum, JobStatusEnum } from '@novu/shared';
 
+import { colors, Text, CheckCircle, ErrorIcon } from '@novu/design-system';
 import { ExecutionDetailsWebhookFeedback } from './ExecutionDetailsWebhookFeedback';
 import { getLogoByType } from './helpers';
-import { colors, Text, CheckCircle, ErrorIcon } from '@novu/design-system';
 
 const StepName = styled(Text)`
   color: ${({ theme }) => (theme.colorScheme === 'dark' ? colors.white : colors.B40)};
@@ -80,30 +80,34 @@ const StepLogo = ({ status, type }) => {
   );
 };
 
-const generateDetailByStepAndStatus = (status, step) => {
+const generateDetailByStepAndStatus = (status, job) => {
   if (status === JobStatusEnum.COMPLETED) {
-    return `Success! ${step.executionDetails?.at(-1)?.detail}`;
+    return `Success! ${job.executionDetails?.at(-1)?.detail}`;
   }
 
-  if (step.type === StepTypeEnum.DIGEST) {
+  if (job.type === StepTypeEnum.DIGEST) {
     if (status === JobStatusEnum.SKIPPED) {
-      return step.executionDetails?.at(-1)?.detail;
+      return job.executionDetails?.at(-1)?.detail;
     }
-    const { digest } = step;
+    const { digest } = job;
+
+    if (!digest.amount && !digest.unit) return `Waiting to receive digest times from bridge endpoint`;
 
     return `Digesting events for ${digest.amount} ${digest.unit}`;
   }
 
-  if (step.type === StepTypeEnum.DELAY) {
-    const { digest, step: stepMetadata, payload } = step;
-    if (stepMetadata.metadata.type === DelayTypeEnum.SCHEDULED) {
+  if (job.type === StepTypeEnum.DELAY) {
+    const { digest, step: stepMetadata, payload } = job;
+
+    if (!digest.amount && !digest.unit) return `Waiting to receive execution delay from bridge endpoint`;
+    if (stepMetadata?.metadata?.type === DelayTypeEnum.SCHEDULED) {
       return `Delaying execution until ${payload[stepMetadata.metadata.delayPath]}`;
     }
 
     return `Delaying execution for ${digest.amount} ${digest.unit}`;
   }
 
-  return step.executionDetails?.at(-1)?.detail;
+  return job.executionDetails?.at(-1)?.detail;
 };
 
 const getDetailsStyledComponentByStepStatus = (status) => {
@@ -118,9 +122,9 @@ const getDetailsStyledComponentByStepStatus = (status) => {
   return StepDetails;
 };
 
-const StepOutcome = ({ createdAt, name, detail, status }) => {
+const StepOutcome = ({ updatedAt, name, detail, status }) => {
   const Details = getDetailsStyledComponentByStepStatus(status);
-  const date = format(parseISO(createdAt), 'dd/MM/yyyy');
+  const date = format(parseISO(updatedAt), 'dd/MM/yyyy');
 
   return (
     <>
@@ -141,7 +145,7 @@ export const ExecutionDetailsStepHeader = ({ step }) => {
         <StepLogo status={status} type={step.type} />
       </Grid.Col>
       <Grid.Col span={7}>
-        <StepOutcome createdAt={step?.createdAt} name={step?.type} detail={generatedDetail} status={status} />
+        <StepOutcome updatedAt={step?.updatedAt} name={step?.type} detail={generatedDetail} status={status} />
       </Grid.Col>
       <Grid.Col span={4}>
         <ExecutionDetailsWebhookFeedback executionDetails={step.executionDetails} />

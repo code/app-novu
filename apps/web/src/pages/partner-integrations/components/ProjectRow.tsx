@@ -1,12 +1,12 @@
 import { forwardRef, useRef, useEffect } from 'react';
 import { Box, Group, CloseButton } from '@mantine/core';
-import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useWatch, Control, Controller } from 'react-hook-form';
 import { useIntersection } from '@mantine/hooks';
 import type { FetchNextPageOptions, InfiniteQueryObserverResult } from '@tanstack/react-query';
 import { IOrganizationEntity } from '@novu/shared';
 
-import { Text, Select } from '@novu/design-system';
+import { Text, Select, IconOutlineArrowLeft, IconOutlineArrowRight } from '@novu/design-system';
+import { OrganizationMembershipResource } from '@clerk/types';
 import { ProjectLinkFormValues } from './LinkProjectContainer';
 
 type ProjectDataType = {
@@ -24,7 +24,7 @@ type SelectItemProps = {
 
 type ProjectRowProps = {
   projectData: ProjectDataType[];
-  organizationsData: IOrganizationEntity[];
+  organizationsData: OrganizationMembershipResource[];
   deleteProjectRow: (projectRowIndex: number) => void;
   showDeleteBtn: boolean;
   control: Control<ProjectLinkFormValues>;
@@ -59,7 +59,7 @@ export function ProjectRow(props: ProjectRowProps) {
 
   const eligibleOrganizationOptions = organizationsData.filter((organization) =>
     formValues.every(
-      (state) => formValues[index].organizationId === organization._id || state.organizationId !== organization._id
+      (state) => formValues[index].organizationId === organization.id || state.organizationId !== organization.id
     )
   );
 
@@ -72,6 +72,7 @@ export function ProjectRow(props: ProjectRowProps) {
 
   eligibleProjectOptions.push({
     id: 'infinite-scroll-helper',
+    // eslint-disable-next-line no-nested-ternary
     name: isFetchingNextPage ? 'Fetching projects...' : hasNextPage ? 'Load newer' : 'All projects fetched',
     disabled: true,
     infiniteHelperRef,
@@ -110,9 +111,9 @@ export function ProjectRow(props: ProjectRowProps) {
         />
       </Box>
       <Group grow position="apart">
-        <ArrowLeftOutlined />
+        <IconOutlineArrowLeft />
         <Text align="center">links to</Text>
-        <ArrowRightOutlined />
+        <IconOutlineArrowRight />
       </Group>
       <Box>
         <Group position="left" noWrap>
@@ -127,8 +128,8 @@ export function ProjectRow(props: ProjectRowProps) {
                 <Select
                   error={fieldState.error?.message}
                   data={(eligibleOrganizationOptions || []).map((item) => ({
-                    label: item.name,
-                    value: item._id,
+                    label: item.organization.name,
+                    value: item.organization.id,
                   }))}
                   {...field}
                 />

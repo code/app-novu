@@ -5,11 +5,11 @@ import { format } from 'date-fns';
 import styled from '@emotion/styled';
 import { useClipboard } from '@mantine/hooks';
 
+import { CheckCircle, colors, ErrorIcon, Timer } from '@novu/design-system';
 import { ActivityStep } from './ActivityStep';
 import { DigestedStep } from './DigestedStep';
 
 import { When } from '../../../components/utils/When';
-import { CheckCircle, colors, ErrorIcon, Timer } from '@novu/design-system';
 import { useNotificationStatus } from '../hooks/useNotificationStatus';
 import { CopyButton } from './CopyButton';
 
@@ -20,9 +20,9 @@ const checkJobsLength = (item) => {
 };
 
 const getJobsLength = (item) => {
-  let length = item.jobs.length;
+  let { length } = item.jobs;
   if (item._digestedNotificationId) {
-    length = length + 1;
+    length += 1;
   }
 
   return length;
@@ -70,7 +70,10 @@ export const ActivityItem = ({ item, onClick }) => {
   }, [item]);
 
   return (
-    <UnstyledButton onClick={isOld ? undefined : (event) => onClick(event, item.id)} className={classes.unstyledButton}>
+    <UnstyledButton
+      onClick={isOld ? undefined : (event) => onClick(event, item._id)}
+      className={classes.unstyledButton}
+    >
       <ListItem dark={theme.colorScheme === 'dark'}>
         <Grid gutter={10}>
           <Grid.Col span={3}>
@@ -108,7 +111,7 @@ export const ActivityItem = ({ item, onClick }) => {
                     }}
                     data-test-id="row-template-name"
                   >
-                    {item?.template?.name ? item.template.name : 'Deleted Template'}
+                    {renderWorkflowName(item)}
                   </h3>
                   <When truthy={isOld}>
                     <Text>Done</Text>
@@ -200,3 +203,11 @@ const ListItem = styled.div<{ dark: boolean }>`
     border-radius: 7px;
   },
 `;
+
+function renderWorkflowName(item: any) {
+  if (!item?.template && item?.bridge?.workflow?.workflowId) {
+    return item.bridge.workflow.workflowId;
+  }
+
+  return item?.template?.name ? item.template.name : 'Deleted Template';
+}

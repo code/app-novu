@@ -4,7 +4,7 @@ import { IOrganizationEntity } from '@novu/shared';
 import { Tabs } from '@novu/design-system';
 
 import { useStepFormPath } from '../../hooks/useStepFormPath';
-import { useActiveIntegrations, useEnvController } from '../../../../hooks';
+import { useActiveIntegrations, useEnvironment } from '../../../../hooks';
 import { EmailInboxContent } from './EmailInboxContent';
 import { EmailMessageEditor } from './EmailMessageEditor';
 import { CustomCodeEditor } from '../CustomCodeEditor';
@@ -15,7 +15,7 @@ const CUSTOM_CODE = 'Custom Code';
 
 export function EmailContentCard({ organization }: { organization: IOrganizationEntity | undefined }) {
   const { template } = useTemplateEditorForm();
-  const { readonly, chimera } = useEnvController({}, template?.chimera);
+  const { readonly, bridge } = useEnvironment({ bridge: template?.bridge });
   const stepFormPath = useStepFormPath();
   const { control, setValue, watch } = useFormContext(); // retrieve all hook methods
   const contentType = watch(`${stepFormPath}.template.contentType`);
@@ -56,7 +56,7 @@ export function EmailContentCard({ organization }: { organization: IOrganization
 
   return (
     <>
-      <EmailInboxContent chimera={chimera} integration={integration} readonly={readonly} />
+      <EmailInboxContent bridge={bridge} integration={integration} readonly={readonly} />
       <div data-test-id="email-step-settings-edit">
         <div data-test-id="editor-type-selector">
           <Tabs value={activeTab} onTabChange={onTabChange} menuTabs={menuTabs} keepMounted={false} />

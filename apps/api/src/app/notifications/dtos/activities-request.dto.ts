@@ -1,46 +1,75 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ChannelTypeEnum } from '@novu/shared';
+import { IsOptional } from 'class-validator';
 
 export class ActivitiesRequestDto {
-  @ApiProperty({
-    enum: ChannelTypeEnum,
+  @ApiPropertyOptional({
+    enum: [...Object.values(ChannelTypeEnum)],
+    enumName: 'ChannelTypeEnum',
     isArray: true,
+    description: 'Array of channel types',
   })
-  channels: ChannelTypeEnum[] | ChannelTypeEnum;
+  @IsOptional()
+  channels?: ChannelTypeEnum[] | ChannelTypeEnum;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     isArray: true,
+    description: 'Array of template IDs or a single template ID',
   })
-  templates: string[] | string;
+  @IsOptional()
+  templates?: string[] | string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     isArray: true,
+    description: 'Array of email addresses or a single email address',
   })
-  emails: string | string[];
+  @IsOptional()
+  emails?: string | string[];
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     deprecated: true,
+    description: 'Search term (deprecated)',
   })
-  search: string;
+  @IsOptional()
+  search?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     isArray: true,
+    description: 'Array of subscriber IDs or a single subscriber ID',
   })
-  subscriberIds: string | string[];
+  @IsOptional()
+  subscriberIds?: string | string[];
 
   @ApiPropertyOptional({
     type: Number,
-    required: false,
+    default: 0,
+    description: 'Page number for pagination',
   })
-  page?: number = 0;
+  @IsOptional()
+  page?: number;
 
   @ApiPropertyOptional({
     type: String,
-    required: false,
+    description: 'Transaction ID for filtering',
   })
-  transactionId: string;
+  @IsOptional()
+  transactionId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Date filter for records after this timestamp',
+  })
+  @IsOptional()
+  after?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Date filter for records before this timestamp',
+  })
+  @IsOptional()
+  before?: string;
 }

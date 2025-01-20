@@ -1,10 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import * as Sentry from '@sentry/node';
-import { OrganizationRepository, IntegrationEntity } from '@novu/dal';
-import { ChannelTypeEnum, EmailProviderIdEnum, IEmailOptions } from '@novu/shared';
-import { ModuleRef } from '@nestjs/core';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { addBreadcrumb } from '@sentry/node';
+import { IntegrationEntity, OrganizationRepository } from '@novu/dal';
+import { ChannelTypeEnum, EmailProviderIdEnum, IEmailOptions, WorkflowOriginEnum } from '@novu/shared';
 
-import { SendTestEmailCommand } from './send-test-email.command';
 import {
   AnalyticsService,
   ApiException,
@@ -16,6 +14,8 @@ import {
   SelectIntegration,
   SelectIntegrationCommand,
 } from '@novu/application-generic';
+import { SendTestEmailCommand } from './send-test-email.command';
+import { PreviewStep, PreviewStepCommand } from '../../../bridge/usecases/preview-step';
 
 @Injectable()
 export class SendTestEmail {
@@ -25,7 +25,7 @@ export class SendTestEmail {
     private selectIntegration: SelectIntegration,
     private analyticsService: AnalyticsService,
     protected getNovuProviderCredentials: GetNovuProviderCredentials,
-    protected moduleRef: ModuleRef
+    private previewStep: PreviewStep
   ) {}
 
   @InstrumentUsecase()
@@ -36,7 +36,7 @@ export class SendTestEmail {
 
     const email = command.to;
 
-    Sentry.addBreadcrumb({
+    addBreadcrumb({
       message: 'Sending Email',
     });
 
@@ -66,8 +66,9 @@ export class SendTestEmail {
 
     let html = '';
     let subject = '';
+    let bridgeProviderData: Record<string, unknown> = {};
 
-    if (!command.chimera) {
+    if (!command.bridge) {
       const template = await this.compileEmailTemplateUsecase.execute(
         CompileEmailTemplateCommand.create({
           ...command,
@@ -87,28 +88,33 @@ export class SendTestEmail {
       subject = template.subject;
     }
 
-    if (command.chimera) {
-      if (process.env.NOVU_ENTERPRISE === 'true' || process.env.CI_EE_TEST === 'true') {
-        if (!require('@novu/ee-echo-api')?.PreviewStep) {
-          throw new ApiException('Chimera module is not loaded');
-        }
-        const service = this.moduleRef.get(require('@novu/ee-echo-api')?.PreviewStep, { strict: false });
-        const data = await service.execute({
+    if (command.bridge) {
+      if (!command.workflowId || !command.stepId) {
+        throw new BadRequestException('Workflow ID and step ID are required');
+      }
+
+      const data = await this.previewStep.execute(
+        PreviewStepCommand.create({
           workflowId: command.workflowId,
           stepId: command.stepId,
-          inputs: command.inputs,
-          data: command.payload,
+          controls: command.controls,
+          payload: command.payload,
           environmentId: command.environmentId,
           organizationId: command.organizationId,
           userId: command.userId,
-        });
+          workflowOrigin: WorkflowOriginEnum.EXTERNAL,
+        })
+      );
 
-        if (!data.outputs) {
-          throw new ApiException('Could not retrieve content from edge');
-        }
+      if (!data.outputs) {
+        throw new ApiException('Could not retrieve content from edge');
+      }
 
-        html = data.outputs.body;
-        subject = data.outputs.subject;
+      html = data.outputs.body as string;
+      subject = data.outputs.subject as string;
+
+      if (data.providers && typeof data.providers === 'object') {
+        bridgeProviderData = data.providers[integration.providerId] || {};
       }
     }
 
@@ -117,12 +123,10 @@ export class SendTestEmail {
         to: Array.isArray(email) ? email : [email],
         subject,
         html: html as string,
-        from: command.payload.$sender_email || integration?.credentials.from || 'no-reply@novu.co',
+        from: (command.payload.$sender_email as string) || integration?.credentials.from || 'no-reply@novu.co',
       };
 
-      await this.sendMessage(integration, mailData, mailFactory, command);
-
-      return;
+      await this.sendMessage(integration, mailData, mailFactory, command, bridgeProviderData);
     }
   }
 
@@ -130,13 +134,14 @@ export class SendTestEmail {
     integration: IntegrationEntity,
     mailData: IEmailOptions,
     mailFactory: MailFactory,
-    command: SendTestEmailCommand
+    command: SendTestEmailCommand,
+    bridgeProviderData: Record<string, unknown>
   ) {
     const { providerId } = integration;
 
     try {
       const mailHandler = mailFactory.getHandler(integration, mailData.from);
-      await mailHandler.send(mailData);
+      await mailHandler.send({ ...mailData, bridgeProviderData });
       this.analyticsService.track('Test Email Sent - [Events]', command.userId, {
         _organization: command.organizationId,
         _environment: command.environmentId,
@@ -150,6 +155,7 @@ export class SendTestEmail {
 
   private getSystemVariables(variableType: 'subscriber' | 'step' | 'branding', command: SendTestEmailCommand) {
     const variables = {};
+    // eslint-disable-next-line guard-for-in
     for (const variable in command.payload) {
       const [type, names] = variable.includes('.') ? variable.split('.') : variable;
       if (type === variableType) {

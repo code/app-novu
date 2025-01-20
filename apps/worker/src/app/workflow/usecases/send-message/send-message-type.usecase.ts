@@ -1,15 +1,13 @@
-import * as Sentry from '@sentry/node';
+import { captureException } from '@sentry/node';
 import { MessageEntity, MessageRepository } from '@novu/dal';
 import { LogCodeEnum } from '@novu/shared';
 import { ExecutionLogRoute } from '@novu/application-generic';
 
-import { CreateLog } from '../../../shared/logs';
 import { SendMessageCommand } from './send-message.command';
 
 export abstract class SendMessageType {
   protected constructor(
     protected messageRepository: MessageRepository,
-    protected createLogUsecase: CreateLog,
     protected executionLogRoute: ExecutionLogRoute
   ) {}
 
@@ -26,12 +24,13 @@ export abstract class SendMessageType {
   ) {
     const errorString =
       stringifyObject(error?.response?.body) ||
+      stringifyObject(error?.response?.data) ||
       stringifyObject(error?.response) ||
       stringifyObject(error) ||
       errorMessageFallback;
 
     if (error) {
-      Sentry.captureException(errorString);
+      captureException(errorString);
     }
 
     await this.messageRepository.updateMessageStatus(

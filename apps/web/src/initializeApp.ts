@@ -1,8 +1,7 @@
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { far } from '@fortawesome/free-regular-svg-icons';
 import { fas } from '@fortawesome/free-solid-svg-icons';
-import { applyToken, getToken } from '@novu/shared-web';
-import * as Sentry from '@sentry/react';
+import { init, Replay, type Event } from '@sentry/react';
 import { Integrations } from '@sentry/tracing';
 import { ENV, SENTRY_DSN } from './config';
 
@@ -15,11 +14,11 @@ export const initializeApp = () => {
   library.add(far, fas);
 
   if (SENTRY_DSN) {
-    Sentry.init({
+    init({
       dsn: SENTRY_DSN,
       integrations: [
         new Integrations.BrowserTracing(),
-        new Sentry.Replay({
+        new Replay({
           // Additional SDK configuration goes in here, for example:
           maskAllText: true,
           blockAllMedia: true,
@@ -52,13 +51,9 @@ export const initializeApp = () => {
        * We recommend adjusting this value in production
        */
       tracesSampleRate: 1.0,
-      beforeSend(event: Sentry.Event) {
+      beforeSend(event: Event) {
         return event;
       },
     });
   }
-
-  const tokenStoredToken: string = getToken();
-
-  applyToken(tokenStoredToken);
 };

@@ -12,7 +12,7 @@ import { SharedModule } from '../../shared/shared.module';
 
 const BASE_PATH = '/v1/layouts';
 
-describe('Delete a layout - /layouts/:layoutId (DELETE)', async () => {
+describe('Delete a layout - /layouts/:layoutId (DELETE) #novu-v1', async () => {
   let useCase: CreateMessageTemplate;
   let session: UserSession;
 
@@ -64,11 +64,11 @@ describe('Delete a layout - /layouts/:layoutId (DELETE)', async () => {
     const deleteResponse = await session.testAgent.delete(url);
 
     expect(deleteResponse.statusCode).to.eql(409);
-    expect(deleteResponse.body).to.eql({
-      error: 'Conflict',
-      message: `Layout with id ${createdLayout._id} is being used as your default layout, so it can not be deleted`,
-      statusCode: 409,
-    });
+    expect(deleteResponse.body.error).to.eql('Conflict');
+    expect(deleteResponse.body.message).to.eql(
+      `Layout with id ${createdLayout._id} is being used as your default layout, so it can not be deleted`
+    );
+    expect(deleteResponse.body.statusCode).to.eql(409);
   });
 
   it('should throw a conflict error when the layout ID to soft delete is associated to message templates', async () => {
@@ -100,10 +100,10 @@ describe('Delete a layout - /layouts/:layoutId (DELETE)', async () => {
     const deleteResponse = await session.testAgent.delete(url);
 
     expect(deleteResponse.statusCode).to.eql(409);
-    expect(deleteResponse.body).to.eql({
-      error: 'Conflict',
-      message: `Layout with id ${createdLayout._id} is being used so it can not be deleted`,
-      statusCode: 409,
-    });
+    expect(deleteResponse.body.error).to.eql('Conflict');
+    expect(deleteResponse.body.message).to.eql(
+      `Layout with id ${createdLayout._id} is being used so it can not be deleted`
+    );
+    expect(deleteResponse.body.statusCode).to.eql(409);
   });
 });

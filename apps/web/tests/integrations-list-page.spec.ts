@@ -1,29 +1,27 @@
 import {
   ChannelTypeEnum,
+  ChatProviderIdEnum,
   chatProviders,
   EmailProviderIdEnum,
   emailProviders,
   InAppProviderIdEnum,
   inAppProviders,
+  ProvidersIdEnum,
+  PushProviderIdEnum,
   pushProviders,
   SmsProviderIdEnum,
   smsProviders,
 } from '@novu/shared';
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './utils/baseTest';
 
-import { getByTestId, initializeSession, isDarkTheme } from './utils.ts/browser';
-import {
-  checkTableLoading,
-  checkTableRow,
-  clickOnListRow,
-  interceptIntegrationsRequest,
-} from './utils.ts/integrations';
-import { deleteProvider } from './utils.ts/plugins';
+import { initializeSession, isDarkTheme } from './utils/browser';
+import { checkTableLoading, checkTableRow, clickOnListRow, interceptIntegrationsRequest } from './utils/integrations';
+import { deleteProvider, SessionData } from './utils/plugins';
 
-let session;
-
-test.beforeEach(async ({ context }) => {
-  session = await initializeSession(context);
+let session: SessionData;
+test.beforeEach(async ({ page }) => {
+  ({ session } = await initializeSession(page));
 });
 
 test('should show the table loading skeleton and empty state', async ({ page }) => {
@@ -38,23 +36,23 @@ test('should show the table loading skeleton and empty state', async ({ page }) 
   await checkTableLoading(page);
   await integrationsPromise;
 
-  const noIntegrationsPlaceholder = getByTestId(page, 'no-integrations-placeholder');
+  const noIntegrationsPlaceholder = page.getByTestId('no-integrations-placeholder');
   await expect(noIntegrationsPlaceholder).toBeVisible();
   await expect(noIntegrationsPlaceholder).toContainText('Choose a channel you want to start sending notifications');
 
-  const inAppCard = getByTestId(page, 'integration-channel-card-in_app');
+  const inAppCard = page.getByTestId('integration-channel-card-in_app');
   await expect(inAppCard).toBeEnabled();
   await expect(inAppCard).toContainText('In-App');
-  const emailCard = getByTestId(page, 'integration-channel-card-email');
+  const emailCard = page.getByTestId('integration-channel-card-email');
   await expect(emailCard).toBeEnabled();
   await expect(emailCard).toContainText('Email');
-  const chatCard = getByTestId(page, 'integration-channel-card-chat');
+  const chatCard = page.getByTestId('integration-channel-card-chat');
   await expect(chatCard).toBeEnabled();
   await expect(chatCard).toContainText('Chat');
-  const pushCard = getByTestId(page, 'integration-channel-card-push');
+  const pushCard = page.getByTestId('integration-channel-card-push');
   await expect(pushCard).toBeEnabled();
   await expect(pushCard).toContainText('Push');
-  const smsCard = getByTestId(page, 'integration-channel-card-sms');
+  const smsCard = page.getByTestId('integration-channel-card-sms');
   await expect(smsCard).toBeEnabled();
   await expect(smsCard).toContainText('SMS');
 });
@@ -70,7 +68,7 @@ test('should show the table loading skeleton and then table', async ({ page }) =
   await checkTableLoading(page);
   await integrationsPromise;
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await expect(addProvider).toContainText('Add a provider');
 
@@ -115,9 +113,9 @@ test('should show the table loading skeleton and then table', async ({ page }) =
   });
 
   await checkTableRow(page, {
-    name: 'Novu In-App',
+    name: 'Novu Inbox',
     isFree: false,
-    provider: 'Novu In-App',
+    provider: 'Novu Inbox',
     channel: 'In-App',
     environment: 'Development',
     status: 'Active',
@@ -128,24 +126,24 @@ test('should show the select provider sidebar', async ({ page }) => {
   await deleteProvider({
     providerId: InAppProviderIdEnum.Novu,
     channel: ChannelTypeEnum.IN_APP,
-    environmentId: session.environment.id,
-    organizationId: session.organization.id,
+    environmentId: session.environment._id,
+    organizationId: session.organization._id,
   });
 
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  const selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
   await expect(selectProviderSidebar).toContainText('Select a provider');
   await expect(selectProviderSidebar).toContainText('Select a provider to create instance for a channel');
   const search = selectProviderSidebar.locator('input[type="search"]');
   await expect(search).toHaveAttribute('placeholder', 'Search a provider...');
-  const sidebarClose = getByTestId(selectProviderSidebar, 'sidebar-close');
+  const sidebarClose = page.getByTestId('sidebar-close');
   await expect(sidebarClose).toBeVisible();
 
   const channelTabs = selectProviderSidebar.locator('[role="tablist"]');
@@ -157,15 +155,15 @@ test('should show the select provider sidebar', async ({ page }) => {
   await expect(channelTabs).toContainText('Push');
   await expect(channelTabs).toContainText('SMS');
 
-  const inAppGroup = getByTestId(page, 'providers-group-in_app');
+  const inAppGroup = page.getByTestId('providers-group-in_app');
   await expect(inAppGroup).toContainText('In-App');
-  const emailGroup = getByTestId(page, 'providers-group-email');
+  const emailGroup = page.getByTestId('providers-group-email');
   await expect(emailGroup).toContainText('Email');
-  const chatGroup = getByTestId(page, 'providers-group-chat');
+  const chatGroup = page.getByTestId('providers-group-chat');
   await expect(chatGroup).toContainText('Chat');
-  const pushGroup = getByTestId(page, 'providers-group-push');
+  const pushGroup = page.getByTestId('providers-group-push');
   await expect(pushGroup).toContainText('Push');
-  const smsGroup = getByTestId(page, 'providers-group-sms');
+  const smsGroup = page.getByTestId('providers-group-sms');
   await expect(smsGroup).toContainText('SMS');
 
   const allProviders = inAppProviders.concat(emailProviders, chatProviders, pushProviders, smsProviders);
@@ -174,13 +172,13 @@ test('should show the select provider sidebar', async ({ page }) => {
       continue;
     }
 
-    const providerInGroup = getByTestId(selectProviderSidebar, `provider-${provider.id}`);
+    const providerInGroup = page.getByTestId(`provider-${provider.id}`);
     await expect(providerInGroup).toContainText(provider.displayName);
   }
 
-  const cancel = getByTestId(selectProviderSidebar, 'select-provider-sidebar-cancel');
+  const cancel = page.getByTestId('select-provider-sidebar-cancel');
   await expect(cancel).toContainText('Cancel');
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await expect(next).toBeDisabled();
 });
@@ -189,11 +187,11 @@ test('should allow for searching', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  const selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
   const search = selectProviderSidebar.locator('input[type="search"]');
@@ -211,18 +209,18 @@ test('should allow for searching', async ({ page }) => {
   const smsTab = channelTabs.locator('button', { hasText: 'SMS' });
   await expect(smsTab).toBeHidden();
 
-  const emailGroup = getByTestId(page, 'providers-group-email');
+  const emailGroup = page.getByTestId('providers-group-email');
   await expect(emailGroup).toContainText('Email');
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
-  const mailgun = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailgun}`);
+  const mailgun = page.getByTestId(`provider-${EmailProviderIdEnum.Mailgun}`);
   await expect(mailgun).toContainText('Mailgun');
-  const mailerSend = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.MailerSend}`);
+  const mailerSend = page.getByTestId(`provider-${EmailProviderIdEnum.MailerSend}`);
   await expect(mailerSend).toContainText('MailerSend');
-  const emailWebhook = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.EmailWebhook}`);
+  const emailWebhook = page.getByTestId(`provider-${EmailProviderIdEnum.EmailWebhook}`);
   await expect(emailWebhook).toContainText('Email Webhook');
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await expect(next).toBeDisabled();
 });
@@ -231,11 +229,11 @@ test('should show empty search results', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  const selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
   const search = selectProviderSidebar.locator('input[type="search"]');
@@ -253,10 +251,10 @@ test('should show empty search results', async ({ page }) => {
   const smsTab = channelTabs.locator('button', { hasText: 'SMS' });
   await expect(smsTab).toBeHidden();
 
-  const noSearchResults = getByTestId(page, 'select-provider-no-search-results-img');
+  const noSearchResults = page.getByTestId('select-provider-no-search-results-img');
   await expect(noSearchResults).toBeVisible();
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await expect(next).toBeDisabled();
 });
@@ -265,31 +263,28 @@ test('should allow selecting a provider', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  const selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
   await mailjet.click();
 
-  const selectedProviderImage = getByTestId(
-    selectProviderSidebar,
-    `selected-provider-image-${EmailProviderIdEnum.Mailjet}`
-  ).first();
+  const selectedProviderImage = page.getByTestId(`selected-provider-image-${EmailProviderIdEnum.Mailjet}`).first();
   const isDarkThemeEnabled = await isDarkTheme(page);
   await expect(selectedProviderImage).toHaveAttribute(
     'src',
     `/static/images/providers/${isDarkThemeEnabled ? 'dark' : 'light'}/square/${EmailProviderIdEnum.Mailjet}.svg`
   );
 
-  const selectedProviderName = getByTestId(selectProviderSidebar, 'selected-provider-name');
+  const selectedProviderName = page.getByTestId('selected-provider-name');
   await expect(selectedProviderName).toContainText('Mailjet');
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await expect(next).toBeEnabled();
 });
@@ -298,22 +293,22 @@ test('should allow moving to create sidebar', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  const selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
   await mailjet.click();
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await next.click();
 
-  const createProviderInstanceSidebar = getByTestId(page, 'create-provider-instance-sidebar');
+  const createProviderInstanceSidebar = page.getByTestId('create-provider-instance-sidebar');
   await expect(createProviderInstanceSidebar).toBeVisible();
   await expect(createProviderInstanceSidebar).toContainText(
     'Specify assignment preferences to automatically allocate the provider instance to the Email channel.'
@@ -321,20 +316,17 @@ test('should allow moving to create sidebar', async ({ page }) => {
   await expect(createProviderInstanceSidebar).toContainText('Environment');
   await expect(createProviderInstanceSidebar).toContainText('Provider instance executes only for');
 
-  const sidebarClose = getByTestId(createProviderInstanceSidebar, 'sidebar-close');
+  const sidebarClose = page.getByTestId('sidebar-close');
   await expect(sidebarClose).toBeVisible();
 
-  const selectedProviderImage = getByTestId(
-    createProviderInstanceSidebar,
-    `selected-provider-image-${EmailProviderIdEnum.Mailjet}`
-  ).first();
+  const selectedProviderImage = page.getByTestId(`selected-provider-image-${EmailProviderIdEnum.Mailjet}`).first();
   const isDarkThemeEnabled = await isDarkTheme(page);
   await expect(selectedProviderImage).toHaveAttribute(
     'src',
     `/static/images/providers/${isDarkThemeEnabled ? 'dark' : 'light'}/square/${EmailProviderIdEnum.Mailjet}.svg`
   );
 
-  const selectedProviderName = getByTestId(createProviderInstanceSidebar, 'provider-instance-name');
+  const selectedProviderName = page.getByTestId('provider-instance-name');
   await expect(selectedProviderName).toBeVisible();
   await expect(selectedProviderName).toHaveValue('Mailjet');
 
@@ -343,11 +335,11 @@ test('should allow moving to create sidebar', async ({ page }) => {
   await expect(selectedEnv).toContainText('Development');
   await expect(environmentRadios).toContainText('Production');
 
-  const cancel = getByTestId(createProviderInstanceSidebar, 'create-provider-instance-sidebar-cancel');
+  const cancel = page.getByTestId('create-provider-instance-sidebar-cancel');
   await expect(cancel).toContainText('Cancel');
   await expect(cancel).toBeEnabled();
 
-  const create = getByTestId(createProviderInstanceSidebar, 'create-provider-instance-sidebar-create');
+  const create = page.getByTestId('create-provider-instance-sidebar-create');
   await expect(create).toContainText('Create');
   await expect(create).toBeEnabled();
 });
@@ -356,26 +348,26 @@ test('should allow moving back from create provider sidebar to select provider s
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  let selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  let selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
   await mailjet.click();
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await next.click();
 
-  const back = getByTestId(page, 'create-provider-instance-sidebar-back');
+  const back = page.getByTestId('create-provider-instance-sidebar-back');
   await expect(back).toBeVisible();
   await back.click();
 
-  selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 });
 
@@ -383,34 +375,34 @@ test('should create a new mailjet integration', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  let selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
   await mailjet.click();
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await next.click();
 
-  const providerName = getByTestId(page, 'provider-instance-name');
+  const providerName = page.getByTestId('provider-instance-name');
   await providerName.clear();
   await providerName.fill('Mailjet Integration');
 
-  const create = getByTestId(page, 'create-provider-instance-sidebar-create');
+  const create = page.getByTestId('create-provider-instance-sidebar-create');
   await expect(create).toContainText('Create');
   await expect(create).toBeEnabled();
   await create.click();
 
-  const updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  const updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
 
-  const close = getByTestId(updateProviderSidebar, 'sidebar-close');
+  const close = page.getByTestId('sidebar-close');
   await expect(close).toBeVisible();
   await close.click();
 
@@ -419,7 +411,7 @@ test('should create a new mailjet integration', async ({ page }) => {
     provider: 'Mailjet',
     channel: 'Email',
     environment: 'Development',
-    status: 'Disabled',
+    status: 'Active',
   });
 });
 
@@ -427,81 +419,81 @@ test('should create a new mailjet integration with conditions', async ({ page })
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  let selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
   await mailjet.click();
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await next.click();
 
-  const providerName = getByTestId(page, 'provider-instance-name');
+  const providerName = page.getByTestId('provider-instance-name');
   await providerName.clear();
   await providerName.fill('Mailjet Integration');
 
-  const addConditionsButton = getByTestId(page, 'add-conditions-btn');
+  const addConditionsButton = page.getByTestId('add-conditions-btn');
   await addConditionsButton.click();
 
-  const conditionsTitle = getByTestId(page, 'conditions-form-title');
+  const conditionsTitle = page.getByTestId('conditions-form-title');
   await expect(conditionsTitle).toContainText('Conditions for Mailjet Integration provider instance');
 
-  const addConditionButton = getByTestId(page, 'add-new-condition');
+  const addConditionButton = page.getByTestId('add-new-condition');
   await addConditionButton.click();
 
-  const formOn = getByTestId(page, 'conditions-form-on');
+  const formOn = page.getByTestId('conditions-form-on');
   await expect(formOn).toHaveValue('Tenant');
 
-  const formKey = getByTestId(page, 'conditions-form-key');
+  const formKey = page.getByTestId('conditions-form-key');
   await formKey.fill('identifier');
 
-  const formOperator = getByTestId(page, 'conditions-form-operator');
+  const formOperator = page.getByTestId('conditions-form-operator');
   await expect(formOperator).toHaveValue('Equal');
 
-  const formValue = getByTestId(page, 'conditions-form-value');
+  const formValue = page.getByTestId('conditions-form-value');
   await formValue.fill('tenant123');
 
-  let applyButton = getByTestId(page, 'apply-conditions-btn');
+  let applyButton = page.getByTestId('apply-conditions-btn');
   await applyButton.click();
 
   await expect(addConditionsButton).toContainText('Edit conditions');
 
-  const create = getByTestId(page, 'create-provider-instance-sidebar-create');
+  const create = page.getByTestId('create-provider-instance-sidebar-create');
   await expect(create).toContainText('Create');
   await expect(create).toBeEnabled();
   await create.click();
 
-  const updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  const updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
 
-  let headerAddConditions = getByTestId(updateProviderSidebar, 'header-add-conditions-btn');
+  let headerAddConditions = page.getByTestId('header-add-conditions-btn');
   await expect(headerAddConditions).toContainText('1');
   await headerAddConditions.click();
 
-  const addNewCondition = getByTestId(page, 'add-new-condition');
+  const addNewCondition = page.getByTestId('add-new-condition');
   await addNewCondition.click();
 
-  const conditionsFormKey = getByTestId(page, 'conditions-form-key').last();
+  const conditionsFormKey = page.getByTestId('conditions-form-key').last();
   await conditionsFormKey.fill('identifier');
 
-  const conditionsFormValue = getByTestId(page, 'conditions-form-value').last();
+  const conditionsFormValue = page.getByTestId('conditions-form-value').last();
   await conditionsFormValue.fill('tenant456');
 
-  applyButton = getByTestId(page, 'apply-conditions-btn');
+  applyButton = page.getByTestId('apply-conditions-btn');
   await applyButton.click();
 
-  headerAddConditions = getByTestId(updateProviderSidebar, 'header-add-conditions-btn');
+  headerAddConditions = page.getByTestId('header-add-conditions-btn');
   await expect(headerAddConditions).toContainText('2');
 
   await expect(page).toHaveURL(/\/integrations\//);
 
-  const close = getByTestId(updateProviderSidebar, 'sidebar-close');
+  const close = page.getByTestId('sidebar-close');
   await expect(close).toBeVisible();
   await close.click();
 
@@ -510,7 +502,7 @@ test('should create a new mailjet integration with conditions', async ({ page })
     provider: 'Mailjet',
     channel: 'Email',
     environment: 'Development',
-    status: 'Disabled',
+    status: 'Active',
   });
 });
 
@@ -518,12 +510,12 @@ test('should remove as primary when adding conditions', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  await clickOnListRow(page, new RegExp(`SendGrid.*Development`));
+  await clickOnListRow(page, /SendGrid.*Development/);
 
-  const headerAddConditions = getByTestId(page, 'header-add-conditions-btn');
+  const headerAddConditions = page.getByTestId('header-add-conditions-btn');
   await headerAddConditions.click();
 
-  const removePrimaryFlagModal = getByTestId(page, 'remove-primary-flag-modal');
+  const removePrimaryFlagModal = page.getByTestId('remove-primary-flag-modal');
   await expect(removePrimaryFlagModal).toBeVisible();
   await expect(removePrimaryFlagModal).toContainText('Primary flag will be removed');
   await expect(removePrimaryFlagModal).toContainText(
@@ -537,38 +529,38 @@ test('should remove as primary when adding conditions', async ({ page }) => {
   await expect(gotIt).toBeVisible();
   await gotIt.click();
 
-  const conditionsTitle = getByTestId(page, 'conditions-form-title');
+  const conditionsTitle = page.getByTestId('conditions-form-title');
   await expect(conditionsTitle).toContainText('Conditions for SendGrid provider instance');
 
-  const addConditionButton = getByTestId(page, 'add-new-condition');
+  const addConditionButton = page.getByTestId('add-new-condition');
   await addConditionButton.click();
 
-  const formOn = getByTestId(page, 'conditions-form-on');
+  const formOn = page.getByTestId('conditions-form-on');
   await expect(formOn).toHaveValue('Tenant');
 
-  const formKey = getByTestId(page, 'conditions-form-key');
+  const formKey = page.getByTestId('conditions-form-key');
   await formKey.fill('identifier');
 
-  const formOperator = getByTestId(page, 'conditions-form-operator');
+  const formOperator = page.getByTestId('conditions-form-operator');
   await expect(formOperator).toHaveValue('Equal');
 
-  const formValue = getByTestId(page, 'conditions-form-value');
+  const formValue = page.getByTestId('conditions-form-value');
   await formValue.fill('tenant123');
 
-  let applyButton = getByTestId(page, 'apply-conditions-btn');
+  const applyButton = page.getByTestId('apply-conditions-btn');
   await applyButton.click();
 
   const providerName = page.getByPlaceholder('Enter instance name');
   await providerName.clear();
   await providerName.fill('SendGrid test');
 
-  const fromField = getByTestId(page, 'from');
+  const fromField = page.getByTestId('from');
   await fromField.fill('info@novu.co');
 
-  const senderName = getByTestId(page, 'senderName');
+  const senderName = page.getByTestId('senderName');
   await senderName.fill('Novu');
 
-  const updateButton = getByTestId(page, 'update-provider-sidebar-update');
+  const updateButton = page.getByTestId('update-provider-sidebar-update');
   await expect(updateButton).toContainText('Update');
   await expect(updateButton).toBeEnabled();
   await updateButton.click();
@@ -584,20 +576,20 @@ test('should remove conditions when set to primary', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
   await expect(page).toHaveURL(/\/integrations\/create/);
 
-  const selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
   await mailjet.click();
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await next.click();
 
@@ -607,45 +599,45 @@ test('should remove conditions when set to primary', async ({ page }) => {
   await providerName.clear();
   await providerName.fill('Mailjet Integration');
 
-  const addConditionsButton = getByTestId(page, 'add-conditions-btn');
+  const addConditionsButton = page.getByTestId('add-conditions-btn');
   await addConditionsButton.click();
 
-  const conditionsTitle = getByTestId(page, 'conditions-form-title');
+  const conditionsTitle = page.getByTestId('conditions-form-title');
   await expect(conditionsTitle).toContainText('Conditions for Mailjet Integration provider instance');
 
-  const addNewCondition = getByTestId(page, 'add-new-condition');
+  const addNewCondition = page.getByTestId('add-new-condition');
   await addNewCondition.click();
 
-  const formOn = getByTestId(page, 'conditions-form-on');
+  const formOn = page.getByTestId('conditions-form-on');
   await expect(formOn).toHaveValue('Tenant');
 
-  const formKey = getByTestId(page, 'conditions-form-key');
+  const formKey = page.getByTestId('conditions-form-key');
   await formKey.fill('identifier');
 
-  const formOperator = getByTestId(page, 'conditions-form-operator');
+  const formOperator = page.getByTestId('conditions-form-operator');
   await expect(formOperator).toHaveValue('Equal');
 
-  const formValue = getByTestId(page, 'conditions-form-value');
+  const formValue = page.getByTestId('conditions-form-value');
   await formValue.fill('tenant123');
 
-  let applyButton = getByTestId(page, 'apply-conditions-btn');
+  const applyButton = page.getByTestId('apply-conditions-btn');
   await applyButton.click();
 
-  const create = getByTestId(page, 'create-provider-instance-sidebar-create');
+  const create = page.getByTestId('create-provider-instance-sidebar-create');
   await expect(create).toContainText('Create');
   await expect(create).toBeEnabled();
   await create.click();
 
-  const updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  const updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
 
-  const headerAddConditions = getByTestId(updateProviderSidebar, 'header-add-conditions-btn');
+  const headerAddConditions = page.getByTestId('header-add-conditions-btn');
   await expect(headerAddConditions).toContainText('1');
 
-  let makePrimaryButton = getByTestId(updateProviderSidebar, 'header-make-primary-btn');
+  let makePrimaryButton = page.getByTestId('header-make-primary-btn');
   await makePrimaryButton.click();
 
-  const removeConditionsModal = getByTestId(page, 'remove-conditions-modal');
+  const removeConditionsModal = page.getByTestId('remove-conditions-modal');
   await expect(removeConditionsModal).toBeVisible();
   await expect(removeConditionsModal).toContainText('Conditions will be removed');
   await expect(removeConditionsModal).toContainText('Marking this instance as primary will remove all conditions');
@@ -655,88 +647,88 @@ test('should remove conditions when set to primary', async ({ page }) => {
   await expect(removeConditionsButton).toBeVisible();
   await removeConditionsButton.click();
 
-  makePrimaryButton = getByTestId(updateProviderSidebar, 'header-make-primary-btn');
+  makePrimaryButton = page.getByTestId('header-make-primary-btn');
   await expect(makePrimaryButton).toBeHidden();
 
-  const sidebarClose = getByTestId(page, 'sidebar-close');
+  const sidebarClose = page.getByTestId('sidebar-close');
   await sidebarClose.click();
 
-  await clickOnListRow(page, new RegExp(`Mailjet Integration.*Development`));
+  await clickOnListRow(page, /Mailjet Integration.*Development/);
 });
 
 test('should update the mailjet integration', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  let selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
   await mailjet.click();
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await next.click();
 
-  let providerName = getByTestId(page, 'provider-instance-name');
+  let providerName = page.getByTestId('provider-instance-name');
   await providerName.clear();
   await providerName.fill('Mailjet Integration');
 
-  const create = getByTestId(page, 'create-provider-instance-sidebar-create');
+  const create = page.getByTestId('create-provider-instance-sidebar-create');
   await expect(create).toContainText('Create');
   await expect(create).toBeEnabled();
   await create.click();
 
-  const updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  const updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
   await expect(updateProviderSidebar).toContainText('Set up credentials to start sending notifications.');
 
-  const integrationChannel = getByTestId(updateProviderSidebar, 'provider-instance-channel');
+  const integrationChannel = page.getByTestId('provider-instance-channel');
   await expect(integrationChannel).toContainText('Email');
 
-  const integrationEnvironment = getByTestId(updateProviderSidebar, 'provider-instance-environment');
+  const integrationEnvironment = page.getByTestId('provider-instance-environment');
   await expect(integrationEnvironment).toContainText('Development');
 
-  const isActive = getByTestId(updateProviderSidebar, 'is_active_id');
-  await expect(isActive).toHaveValue('false');
+  const isActive = page.getByTestId('is_active_id');
+  await expect(isActive).toHaveValue('true');
 
   providerName = updateProviderSidebar.getByPlaceholder('Enter instance name');
   await expect(providerName).toHaveValue('Mailjet Integration');
 
-  const identifier = getByTestId(updateProviderSidebar, 'provider-instance-identifier');
+  const identifier = page.getByTestId('provider-instance-identifier');
   await expect(identifier).toHaveValue(/mailjet/);
 
-  const updateButton = getByTestId(updateProviderSidebar, 'update-provider-sidebar-update');
+  const updateButton = page.getByTestId('update-provider-sidebar-update');
   await expect(updateButton).toBeDisabled();
 
   await providerName.clear();
   await providerName.fill('Mailjet Integration Updated');
 
-  await isActive.locator('~ label').click();
-
-  const apiKey = getByTestId(updateProviderSidebar, 'apiKey');
+  const apiKey = page.getByTestId('apiKey');
   await apiKey.fill('fake-api-key');
 
-  const secretKey = getByTestId(updateProviderSidebar, 'secretKey');
+  const secretKey = page.getByTestId('secretKey');
   await secretKey.fill('fake-secret-key');
 
-  const fromField = getByTestId(updateProviderSidebar, 'from');
+  const fromField = page.getByTestId('from');
   await fromField.fill('info@novu.co');
 
-  const senderName = getByTestId(updateProviderSidebar, 'senderName');
+  const senderName = page.getByTestId('senderName');
   await senderName.fill('Novu');
+
+  const toastClose = page.locator('.mantine-Notification-closeButton');
+  await toastClose.click();
 
   await expect(updateButton).toBeEnabled();
   await updateButton.click();
+  await expect(updateButton).toBeDisabled();
 
-  const modalClose = page.locator('.mantine-Modal-close');
-  await modalClose.click();
-  const sidebarClose = getByTestId(page, 'sidebar-close');
+  const sidebarClose = page.getByTestId('sidebar-close');
   await sidebarClose.click();
 
   await checkTableRow(page, {
@@ -752,77 +744,77 @@ test('should update the mailjet integration from the list', async ({ page }) => 
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  let selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
   await mailjet.click();
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await next.click();
 
-  let providerName = getByTestId(page, 'provider-instance-name');
+  let providerName = page.getByTestId('provider-instance-name');
   await providerName.clear();
   await providerName.fill('Mailjet Integration');
 
-  const create = getByTestId(page, 'create-provider-instance-sidebar-create');
+  const create = page.getByTestId('create-provider-instance-sidebar-create');
   await expect(create).toContainText('Create');
   await expect(create).toBeEnabled();
   await create.click();
 
-  let updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  let updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
 
-  let sidebarClose = getByTestId(page, 'sidebar-close');
+  let sidebarClose = page.getByTestId('sidebar-close');
   await sidebarClose.click();
 
   await clickOnListRow(page, 'Mailjet Integration');
 
-  updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
 
-  const isActive = getByTestId(updateProviderSidebar, 'is_active_id');
-  await expect(isActive).toHaveValue('false');
+  const isActive = page.getByTestId('is_active_id');
+  await expect(isActive).toHaveValue('true');
 
   providerName = updateProviderSidebar.getByPlaceholder('Enter instance name');
   await expect(providerName).toHaveValue('Mailjet Integration');
 
-  const identifier = getByTestId(updateProviderSidebar, 'provider-instance-identifier');
+  const identifier = page.getByTestId('provider-instance-identifier');
   await expect(identifier).toHaveValue(/mailjet/);
 
-  const updateButton = getByTestId(updateProviderSidebar, 'update-provider-sidebar-update');
+  const updateButton = page.getByTestId('update-provider-sidebar-update');
   await expect(updateButton).toBeDisabled();
 
   providerName = updateProviderSidebar.getByPlaceholder('Enter instance name');
   await providerName.clear();
   await providerName.fill('Mailjet Integration Updated');
 
-  await isActive.locator('~ label').click();
-
-  const apiKey = getByTestId(updateProviderSidebar, 'apiKey');
+  const apiKey = page.getByTestId('apiKey');
   await apiKey.fill('fake-api-key');
 
-  const secretKey = getByTestId(updateProviderSidebar, 'secretKey');
+  const secretKey = page.getByTestId('secretKey');
   await secretKey.fill('fake-secret-key');
 
-  const fromField = getByTestId(updateProviderSidebar, 'from');
+  const fromField = page.getByTestId('from');
   await fromField.fill('info@novu.co');
 
-  const senderName = getByTestId(updateProviderSidebar, 'senderName');
+  const senderName = page.getByTestId('senderName');
   await senderName.fill('Novu');
+
+  const toastClose = page.locator('.mantine-Notification-closeButton');
+  await toastClose.click();
 
   await expect(updateButton).toBeEnabled();
   await updateButton.click();
+  await expect(updateButton).toBeDisabled();
 
-  const modalClose = page.locator('.mantine-Modal-close');
-  await modalClose.click();
-  sidebarClose = getByTestId(page, 'sidebar-close');
+  sidebarClose = page.getByTestId('sidebar-close');
   await sidebarClose.click();
 
   await checkTableRow(page, {
@@ -838,39 +830,39 @@ test('should allow to delete the mailjet integration', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  const addProvider = getByTestId(page, 'add-provider');
+  const addProvider = page.getByTestId('add-provider');
   await expect(addProvider).toBeEnabled();
   await addProvider.click();
 
-  let selectProviderSidebar = getByTestId(page, 'select-provider-sidebar');
+  const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
   await expect(selectProviderSidebar).toBeVisible();
 
-  const mailjet = getByTestId(selectProviderSidebar, `provider-${EmailProviderIdEnum.Mailjet}`);
+  const mailjet = page.getByTestId(`provider-${EmailProviderIdEnum.Mailjet}`);
   await expect(mailjet).toContainText('Mailjet');
   await mailjet.click();
 
-  const next = getByTestId(selectProviderSidebar, 'select-provider-sidebar-next');
+  const next = page.getByTestId('select-provider-sidebar-next');
   await expect(next).toContainText('Next');
   await next.click();
 
-  let providerName = getByTestId(page, 'provider-instance-name');
+  const providerName = page.getByTestId('provider-instance-name');
   await providerName.clear();
   await providerName.fill('Mailjet Integration');
 
-  const create = getByTestId(page, 'create-provider-instance-sidebar-create');
+  const create = page.getByTestId('create-provider-instance-sidebar-create');
   await expect(create).toContainText('Create');
   await expect(create).toBeEnabled();
   await create.click();
 
-  let updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  let updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
 
-  let sidebarClose = getByTestId(page, 'sidebar-close');
+  const sidebarClose = page.getByTestId('sidebar-close');
   await sidebarClose.click();
 
   await clickOnListRow(page, 'Mailjet Integration');
 
-  updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
 
   const menu = updateProviderSidebar.locator('[aria-haspopup="menu"]');
@@ -878,7 +870,7 @@ test('should allow to delete the mailjet integration', async ({ page }) => {
   const deleteButton = updateProviderSidebar.locator('button[data-menu-item="true"]', { hasText: 'Delete' });
   await deleteButton.click();
 
-  const deleteModal = getByTestId(page, 'delete-provider-instance-modal');
+  const deleteModal = page.getByTestId('delete-provider-instance-modal');
   await expect(deleteModal).toBeVisible();
   await expect(deleteModal).toContainText('Delete Mailjet Integration instance?');
   await expect(deleteModal).toContainText(
@@ -891,7 +883,7 @@ test('should allow to delete the mailjet integration', async ({ page }) => {
   await expect(deleteInstanceButton).toBeEnabled();
   await deleteInstanceButton.click();
 
-  const integrationsTable = getByTestId(page, 'integration-name-cell', { hasText: 'Mailjet Integration' });
+  const integrationsTable = page.getByTestId('integration-name-cell').getByText('Mailjet Integration');
   await expect(integrationsTable).toBeHidden();
 });
 
@@ -899,50 +891,47 @@ test('should show the Novu in-app integration', async ({ page }) => {
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  await clickOnListRow(page, new RegExp(`Novu In-App.*Development`));
+  await clickOnListRow(page, /Novu Inbox.*Development/);
 
-  const updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  const updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
   await expect(updateProviderSidebar).toContainText(
     'Select a framework to set up credentials to start sending notifications.'
   );
 
-  const sidebarClose = getByTestId(updateProviderSidebar, 'sidebar-close');
+  const sidebarClose = page.getByTestId('sidebar-close');
   await expect(sidebarClose).toBeVisible();
 
-  const integrationChannel = getByTestId(updateProviderSidebar, 'provider-instance-channel');
+  const integrationChannel = page.getByTestId('provider-instance-channel');
   await expect(integrationChannel).toContainText('In-App');
 
-  const integrationEnvironment = getByTestId(updateProviderSidebar, 'provider-instance-environment');
+  const integrationEnvironment = page.getByTestId('provider-instance-environment');
   await expect(integrationEnvironment).toContainText('Development');
 
   const linkToDocs = updateProviderSidebar.getByRole('link', { name: 'Explore set-up guide' });
   await expect(linkToDocs).toBeVisible();
 
-  const isActive = getByTestId(updateProviderSidebar, 'is_active_id');
+  const isActive = page.getByTestId('is_active_id');
   await expect(isActive).toHaveValue('true');
 
   const isDarkThemeEnabled = await isDarkTheme(page);
-  const selectedProviderImage = getByTestId(
-    updateProviderSidebar,
-    `selected-provider-image-${InAppProviderIdEnum.Novu}`
-  );
+  const selectedProviderImage = page.getByTestId(`selected-provider-image-${InAppProviderIdEnum.Novu}`);
   await expect(selectedProviderImage).toHaveAttribute(
     'src',
     `/static/images/providers/${isDarkThemeEnabled ? 'dark' : 'light'}/square/${InAppProviderIdEnum.Novu}.svg`
   );
 
-  const selectedProviderName = getByTestId(updateProviderSidebar, 'provider-instance-name').first();
+  const selectedProviderName = page.getByTestId('provider-instance-name').first();
   await expect(selectedProviderName).toBeVisible();
-  await expect(selectedProviderName).toHaveValue('Novu In-App');
+  await expect(selectedProviderName).toHaveValue('Novu Inbox');
 
-  const identifier = getByTestId(updateProviderSidebar, 'provider-instance-identifier');
+  const identifier = page.getByTestId('provider-instance-identifier');
   await expect(identifier).toHaveValue(/novu-in-app/);
 
-  const hmacCheckbox = getByTestId(updateProviderSidebar, 'hmac');
+  const hmacCheckbox = page.getByTestId('hmac');
   await expect(hmacCheckbox).not.toBeChecked();
 
-  const novuInAppFrameworks = getByTestId(updateProviderSidebar, 'novu-in-app-frameworks');
+  const novuInAppFrameworks = page.getByTestId('novu-in-app-frameworks');
   await expect(novuInAppFrameworks).toContainText('Integrate In-App using a framework below');
   await expect(novuInAppFrameworks).toContainText('React');
   await expect(novuInAppFrameworks).toContainText('Angular');
@@ -951,7 +940,7 @@ test('should show the Novu in-app integration', async ({ page }) => {
   await expect(novuInAppFrameworks).toContainText('Vue');
   await expect(novuInAppFrameworks).toContainText('iFrame');
 
-  const updateButton = getByTestId(updateProviderSidebar, 'update-provider-sidebar-update');
+  const updateButton = page.getByTestId('update-provider-sidebar-update');
   await expect(updateButton).toContainText('Update');
   await expect(updateButton).toBeDisabled();
 });
@@ -960,26 +949,26 @@ test('should show the Novu in-app integration - React guide', async ({ page }) =
   await page.goto('/integrations');
   await expect(page).toHaveURL(/\/integrations/);
 
-  await clickOnListRow(page, new RegExp(`Novu In-App.*Development`));
+  await clickOnListRow(page, /Novu Inbox.*Development/);
 
-  let updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  let updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toBeVisible();
 
-  const novuInAppFrameworks = getByTestId(updateProviderSidebar, 'novu-in-app-frameworks');
+  const novuInAppFrameworks = page.getByTestId('novu-in-app-frameworks');
   await expect(novuInAppFrameworks).toContainText('React');
 
   const reactGuide = novuInAppFrameworks.locator('div').filter({ hasText: 'React' }).nth(1);
   await reactGuide.click();
 
-  updateProviderSidebar = getByTestId(page, 'update-provider-sidebar');
+  updateProviderSidebar = page.getByTestId('update-provider-sidebar');
   await expect(updateProviderSidebar).toContainText('React integration guide');
 
-  const sidebarBack = getByTestId(updateProviderSidebar, 'sidebar-back');
+  const sidebarBack = page.getByTestId('sidebar-back');
   await expect(sidebarBack).toBeVisible();
-  const setupTimeline = getByTestId(updateProviderSidebar, 'setup-timeline');
+  const setupTimeline = page.getByTestId('setup-timeline');
   await expect(setupTimeline).toBeVisible();
 
-  const updateButton = getByTestId(updateProviderSidebar, 'update-provider-sidebar-update');
+  const updateButton = page.getByTestId('update-provider-sidebar-update');
   await expect(updateButton).toContainText('Update');
   await expect(updateButton).toBeDisabled();
 });
@@ -989,6 +978,7 @@ test('should show the Novu Email integration sidebar', async ({ page }) => {
     page,
     modifyBody: (body) => {
       const [firstIntegration] = body.data;
+      // eslint-disable-next-line no-param-reassign
       body.data = [
         {
           _id: EmailProviderIdEnum.Novu,
@@ -1010,9 +1000,9 @@ test('should show the Novu Email integration sidebar', async ({ page }) => {
   await expect(page).toHaveURL(/\/integrations/);
   await integrationsPromise;
 
-  await clickOnListRow(page, new RegExp(`Novu Email.*Development`));
+  await clickOnListRow(page, /Novu Email.*Development/);
 
-  let updateProviderSidebar = getByTestId(page, 'update-provider-sidebar-novu');
+  const updateProviderSidebar = page.getByTestId('update-provider-sidebar-novu');
   await expect(updateProviderSidebar).toContainText('Test Provider');
   await expect(updateProviderSidebar).toBeVisible();
 
@@ -1024,23 +1014,23 @@ test('should show the Novu Email integration sidebar', async ({ page }) => {
   );
   await expect(novuEmailLogo).toBeVisible();
 
-  const integrationChannel = getByTestId(updateProviderSidebar, 'provider-instance-channel');
+  const integrationChannel = page.getByTestId('provider-instance-channel');
   await expect(integrationChannel).toContainText('Email');
 
-  const integrationEnvironment = getByTestId(updateProviderSidebar, 'provider-instance-environment');
+  const integrationEnvironment = page.getByTestId('provider-instance-environment');
   await expect(integrationEnvironment).toContainText('Development');
 
-  const selectedProviderName = getByTestId(updateProviderSidebar, 'provider-instance-name').first();
+  const selectedProviderName = page.getByTestId('provider-instance-name').first();
   await expect(selectedProviderName).toBeVisible();
   await expect(selectedProviderName).toHaveValue('Novu Email');
 
-  const providerLimits = getByTestId(updateProviderSidebar, 'novu-provider-limits');
+  const providerLimits = page.getByTestId('novu-provider-limits');
   const providerLimitsText = await providerLimits.innerText();
   await expect(providerLimitsText).toEqual(
     'Novu provider allows sending max 300 emails per month,\nto send more messages, configure a different provider'
   );
 
-  const limitbarLimit = getByTestId(updateProviderSidebar, 'limitbar-limit');
+  const limitbarLimit = page.getByTestId('limitbar-limit');
   const limitbarText = await limitbarLimit.innerText();
   await expect(limitbarText).toEqual('300 emails per month');
 });
@@ -1050,6 +1040,7 @@ test('should show the Novu SMS integration sidebar', async ({ page }) => {
     page,
     modifyBody: (body) => {
       const [firstIntegration] = body.data;
+      // eslint-disable-next-line no-param-reassign
       body.data = [
         {
           _id: SmsProviderIdEnum.Novu,
@@ -1071,9 +1062,9 @@ test('should show the Novu SMS integration sidebar', async ({ page }) => {
   await expect(page).toHaveURL(/\/integrations/);
   await integrationsPromise;
 
-  await clickOnListRow(page, new RegExp(`Novu SMS.*Development`));
+  await clickOnListRow(page, /Novu SMS.*Development/);
 
-  let updateProviderSidebar = getByTestId(page, 'update-provider-sidebar-novu');
+  const updateProviderSidebar = page.getByTestId('update-provider-sidebar-novu');
   await expect(updateProviderSidebar).toContainText('Test Provider');
   await expect(updateProviderSidebar).toBeVisible();
 
@@ -1083,23 +1074,92 @@ test('should show the Novu SMS integration sidebar', async ({ page }) => {
   );
   await expect(novuEmailLogo).toBeVisible();
 
-  const integrationChannel = getByTestId(updateProviderSidebar, 'provider-instance-channel');
+  const integrationChannel = page.getByTestId('provider-instance-channel');
   await expect(integrationChannel).toContainText('SMS');
 
-  const integrationEnvironment = getByTestId(updateProviderSidebar, 'provider-instance-environment');
+  const integrationEnvironment = page.getByTestId('provider-instance-environment');
   await expect(integrationEnvironment).toContainText('Development');
 
-  const selectedProviderName = getByTestId(updateProviderSidebar, 'provider-instance-name').first();
+  const selectedProviderName = page.getByTestId('provider-instance-name').first();
   await expect(selectedProviderName).toBeVisible();
   await expect(selectedProviderName).toHaveValue('Novu SMS');
 
-  const providerLimits = getByTestId(updateProviderSidebar, 'novu-provider-limits');
+  const providerLimits = page.getByTestId('novu-provider-limits');
   const providerLimitsText = await providerLimits.innerText();
   await expect(providerLimitsText).toEqual(
     'Novu provider allows sending max 20 messages per month,\nto send more messages, configure a different provider'
   );
 
-  const limitbarLimit = getByTestId(updateProviderSidebar, 'limitbar-limit');
+  const limitbarLimit = page.getByTestId('limitbar-limit');
   const limitbarText = await limitbarLimit.innerText();
   await expect(limitbarText).toEqual('20 messages per month');
+});
+
+type PrimaryToggleButtonTest = {
+  channelType: ChannelTypeEnum;
+  providerId: ProvidersIdEnum;
+  providerName: string;
+  enabled: boolean;
+};
+
+const testCases: PrimaryToggleButtonTest[] = [
+  {
+    channelType: ChannelTypeEnum.SMS,
+    providerId: SmsProviderIdEnum.Twilio,
+    providerName: 'Twilio',
+    enabled: true,
+  },
+  {
+    channelType: ChannelTypeEnum.EMAIL,
+    providerId: EmailProviderIdEnum.Mailjet,
+    providerName: 'Mailjet',
+    enabled: true,
+  },
+  {
+    channelType: ChannelTypeEnum.CHAT,
+    providerId: ChatProviderIdEnum.Discord,
+    providerName: 'Discord',
+    enabled: false,
+  },
+  {
+    channelType: ChannelTypeEnum.PUSH,
+    providerId: PushProviderIdEnum.FCM,
+    providerName: 'Firebase',
+    enabled: false,
+  },
+];
+
+testCases.forEach((testCase) => {
+  test(`should ${testCase.enabled ? 'show' : 'NOT show'} the primary toggle button for ${
+    testCase.providerName
+  }`, async ({ page }) => {
+    await page.goto('/integrations');
+    await expect(page).toHaveURL(/\/integrations/);
+
+    const addProvider = page.getByTestId('add-provider');
+    await expect(addProvider).toBeEnabled();
+    await addProvider.click();
+
+    const selectProviderSidebar = page.getByTestId('select-provider-sidebar');
+    await expect(selectProviderSidebar).toBeVisible();
+
+    const mailjet = page.getByTestId(`provider-${testCase.providerId}`);
+    await expect(mailjet).toContainText(testCase.providerName);
+    await mailjet.click();
+
+    const next = page.getByTestId('select-provider-sidebar-next');
+    await expect(next).toContainText('Next');
+    await next.click();
+
+    const providerName = page.getByTestId('provider-instance-name');
+    await providerName.clear();
+    await providerName.fill(`${testCase.providerName} Integration`);
+
+    const create = page.getByTestId('create-provider-instance-sidebar-create');
+    await expect(create).toContainText('Create');
+    await expect(create).toBeEnabled();
+    await create.click();
+
+    await expect(page.getByTestId('header-make-primary-btn')).toBeVisible({ visible: testCase.enabled });
+  });
 });

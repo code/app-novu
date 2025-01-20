@@ -1,17 +1,15 @@
-import { UserSession } from '@novu/testing';
+import { UserSession, IntegrationService } from '@novu/testing';
 import { expect } from 'chai';
 import { ChannelTypeEnum, EmailProviderIdEnum, SmsProviderIdEnum } from '@novu/shared';
-import { IntegrationService } from '@novu/testing';
 import { IntegrationEntity } from '@novu/dal';
 
-describe('Get Active Integrations - Multi-Provider Configuration - /integrations/active (GET)', function () {
+describe('Get Active Integrations - Multi-Provider Configuration - /integrations/active (GET) #novu-v2', function () {
   let session: UserSession;
   const integrationService = new IntegrationService();
 
   beforeEach(async () => {
     session = new UserSession();
     await session.initialize();
-    process.env.LAUNCH_DARKLY_SDK_KEY = '';
   });
 
   it('should get active integrations', async function () {

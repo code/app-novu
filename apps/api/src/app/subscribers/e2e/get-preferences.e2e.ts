@@ -2,11 +2,14 @@ import { UserSession } from '@novu/testing';
 import { expect } from 'chai';
 import { NotificationTemplateEntity } from '@novu/dal';
 
-import { getPreference } from './helpers';
+import { PreferenceLevelEnum } from '@novu/shared';
+import { Novu } from '@novu/api';
+import { expectSdkExceptionGeneric, initNovuClassSdk } from '../../shared/helpers/e2e/sdk/e2e-sdk.helper';
 
-describe('Get Subscribers preferences - /subscribers/preferences/:subscriberId (GET)', function () {
+describe('Get Subscribers workflow preferences - /subscribers/:subscriberId/preferences (GET) #novu-v2', function () {
   let session: UserSession;
   let template: NotificationTemplateEntity;
+  let novuClient: Novu;
 
   beforeEach(async () => {
     session = new UserSession();
@@ -14,26 +17,120 @@ describe('Get Subscribers preferences - /subscribers/preferences/:subscriberId (
     template = await session.createTemplate({
       noFeedId: true,
     });
+    novuClient = initNovuClassSdk(session);
   });
 
-  it('should get subscriber preferences', async function () {
-    const response = await getPreference(session);
+  it('should get subscriber workflow preferences with inactive channels by default', async function () {
+    const response = await novuClient.subscribers.preferences.list(session.subscriberId);
+    const data = response.result[0];
 
-    const data = response.data.data[0];
+    expect(data.preference.channels).to.deep.equal({
+      email: true,
+      inApp: true,
+      push: true,
+      chat: true,
+      sms: true,
+    });
+  });
 
-    expect(data.preference.channels.email).to.equal(true);
-    expect(data.preference.channels.in_app).to.equal(true);
+  it('should get subscriber workflow preferences with inactive channels when includeInactiveChannels is true', async function () {
+    const response = await novuClient.subscribers.preferences.list(session.subscriberId, true);
+    const data = response.result[0];
+
+    expect(data.preference.channels).to.deep.equal({
+      email: true,
+      inApp: true,
+      push: true,
+      chat: true,
+      sms: true,
+    });
+  });
+
+  it('should get subscriber workflow preferences with active channels when includeInactiveChannels is false', async function () {
+    const response = await novuClient.subscribers.preferences.list(session.subscriberId, false);
+    const data = response.result[0];
+
+    expect(data.preference.channels).to.deep.equal({
+      email: true,
+      inApp: true,
+    });
   });
 
   it('should handle un existing subscriberId', async function () {
-    let error;
-    try {
-      await getPreference(session, 'unexisting-subscriber-id');
-    } catch (e) {
-      error = e;
-    }
-
+    const { error } = await expectSdkExceptionGeneric(() =>
+      novuClient.subscribers.preferences.list('unexisting-subscriber-id')
+    );
     expect(error).to.be.ok;
-    expect(error?.response.data.message).to.contain('not found');
+    expect(error?.message).to.contain('not found');
+  });
+});
+
+describe('Get Subscribers preferences by level - /subscribers/:subscriberId/preferences/:level (GET)', function () {
+  let session: UserSession;
+  let template: NotificationTemplateEntity;
+  let novuClient: Novu;
+
+  beforeEach(async () => {
+    session = new UserSession();
+    await session.initialize();
+    template = await session.createTemplate({
+      noFeedId: true,
+    });
+    novuClient = initNovuClassSdk(session);
+  });
+
+  const levels = Object.values(PreferenceLevelEnum);
+
+  levels.forEach((level) => {
+    it(`should get subscriber ${level} preferences with inactive channels by default`, async function () {
+      const response = await novuClient.subscribers.preferences.retrieveByLevel({
+        preferenceLevel: level,
+        subscriberId: session.subscriberId,
+      });
+      const data = response.result[0];
+
+      expect(data.preference.channels).to.deep.equal({
+        email: true,
+        inApp: true,
+        push: true,
+        chat: true,
+        sms: true,
+      });
+    });
+
+    it(`should get subscriber ${level} preferences with inactive channels when includeInactiveChannels is true`, async function () {
+      const response = await novuClient.subscribers.preferences.retrieveByLevel({
+        preferenceLevel: level,
+        subscriberId: session.subscriberId,
+        includeInactiveChannels: {
+          includeInactiveChannels: true,
+        }.includeInactiveChannels,
+      });
+      const data = response.result[0];
+
+      expect(data.preference.channels).to.deep.equal({
+        email: true,
+        inApp: true,
+        push: true,
+        chat: true,
+        sms: true,
+      });
+    });
+
+    it(`should get subscriber ${level} preferences with active channels when includeInactiveChannels is false`, async function () {
+      const response = await novuClient.subscribers.preferences.retrieveByLevel({
+        preferenceLevel: level,
+        subscriberId: session.subscriberId,
+        includeInactiveChannels: {
+          includeInactiveChannels: false,
+        }.includeInactiveChannels,
+      });
+      const data = response.result[0];
+
+      expect(data.preference.channels).to.deep.equal({
+        email: true,
+        inApp: true,
+      });
+    });
   });
 });

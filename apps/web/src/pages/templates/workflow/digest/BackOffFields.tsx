@@ -1,19 +1,18 @@
-import { Group } from '@mantine/core';
+import { Group, Collapse } from '@mantine/core';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Collapse } from '@mantine/core';
 import { DigestTypeEnum } from '@novu/shared';
 
 import { colors, Input, Switch, Tooltip, inputStyles, Text } from '@novu/design-system';
 import { IntervalSelect } from './IntervalSelect';
 import { BackOffTooltipIcon } from './icons/BackOffTooltipIcon';
 import { When } from '../../../../components/utils/When';
-import { useEnvController } from '../../../../hooks';
+import { useEnvironment } from '../../../../hooks';
 import { useStepFormPath } from '../../hooks/useStepFormPath';
 
 const defaultBackoffAmount = '5';
 
 export const BackOffFields = () => {
-  const { readonly } = useEnvController();
+  const { readonly } = useEnvironment();
   const stepFormPath = useStepFormPath();
   const {
     control,

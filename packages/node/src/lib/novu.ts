@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
-import { getEnvVariable } from '@novu/shared/utils';
-import { Subscribers } from './subscribers/subscribers';
+import { getEnvVariable } from '@novu/shared';
 import { EventEmitter } from 'events';
+import { Subscribers } from './subscribers/subscribers';
 import { Changes } from './changes/changes';
 import { INovuConfiguration } from './novu.interface';
 import { Events } from './events/events';
@@ -22,7 +22,7 @@ import { WorkflowOverrides } from './workflow-override/workflow-override';
 import { makeRetryable } from './retry';
 
 export class Novu extends EventEmitter {
-  public readonly apiKey?: string;
+  public readonly secretKey?: string;
   private readonly http: AxiosInstance;
   readonly subscribers: Subscribers;
   readonly environments: Environments;
@@ -42,33 +42,39 @@ export class Novu extends EventEmitter {
   readonly workflowOverrides: WorkflowOverrides;
 
   constructor(config?: INovuConfiguration);
-  constructor(apiKey: string, config?: INovuConfiguration);
+  constructor(secretKey: string, config?: INovuConfiguration);
   constructor(...args: any) {
     super();
 
-    let apiKey: string | undefined;
+    let secretKey: string | undefined;
     let config: INovuConfiguration | undefined;
 
     if (arguments.length === 2) {
-      apiKey = args[0];
-      config = args[1];
+      [secretKey, config] = args;
     } else if (arguments.length === 1) {
       if (typeof args[0] === 'object') {
-        const { apiKey: key, ...rest } = args[0];
-        apiKey = key;
+        const { secretKey: key, ...rest } = args[0];
+        secretKey = key;
         config = rest;
       } else {
-        apiKey = args[0];
+        [secretKey] = args;
       }
     } else {
-      apiKey = getEnvVariable('NOVU_API_KEY');
+      secretKey =
+        getEnvVariable('NOVU_SECRET_KEY') || getEnvVariable('NOVU_API_KEY');
     }
 
-    this.apiKey = apiKey;
+    if (!secretKey) {
+      throw new Error(
+        'Missing secret key. Set the NOVU_SECRET_KEY environment variable or pass a secretKey to new Novu(secretKey) constructor.',
+      );
+    }
+
+    this.secretKey = secretKey;
     const axiosInstance = axios.create({
       baseURL: this.buildBackendUrl(config),
       headers: {
-        Authorization: `ApiKey ${this.apiKey}`,
+        Authorization: `ApiKey ${this.secretKey}`,
       },
     });
 
@@ -115,6 +121,6 @@ export class Novu extends EventEmitter {
 
     return config?.backendUrl.includes('novu.co/v')
       ? config?.backendUrl
-      : config?.backendUrl + `/${novuApiVersion}`;
+      : `${config?.backendUrl}/${novuApiVersion}`;
   }
 }

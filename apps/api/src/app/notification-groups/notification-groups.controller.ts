@@ -2,23 +2,21 @@ import {
   Body,
   ClassSerializerInterceptor,
   Controller,
-  Get,
-  Post,
-  Patch,
   Delete,
+  Get,
   Param,
-  UseGuards,
+  Patch,
+  Post,
   UseInterceptors,
 } from '@nestjs/common';
-import { IJwtPayload } from '@novu/shared';
+import { UserSessionData } from '@novu/shared';
+import { ApiExcludeController, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateNotificationGroup } from './usecases/create-notification-group/create-notification-group.usecase';
 import { UserSession } from '../shared/framework/user.decorator';
 import { CreateNotificationGroupCommand } from './usecases/create-notification-group/create-notification-group.command';
 import { CreateNotificationGroupRequestDto } from './dtos/create-notification-group-request.dto';
-import { UserAuthGuard } from '../auth/framework/user.auth.guard';
 import { GetNotificationGroups } from './usecases/get-notification-groups/get-notification-groups.usecase';
 import { GetNotificationGroupsCommand } from './usecases/get-notification-groups/get-notification-groups.command';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { NotificationGroupResponseDto } from './dtos/notification-group-response.dto';
 import { ExternalApiAccessible } from '../auth/framework/external-api.decorator';
 import { GetNotificationGroup } from './usecases/get-notification-group/get-notification-group.usecase';
@@ -29,12 +27,14 @@ import { DeleteNotificationGroupResponseDto } from './dtos/delete-notification-g
 import { UpdateNotificationGroupCommand } from './usecases/update-notification-group/update-notification-group.command';
 import { UpdateNotificationGroup } from './usecases/update-notification-group/update-notification-group.usecase';
 import { ApiCommonResponses, ApiResponse } from '../shared/framework/response.decorator';
+import { UserAuthentication } from '../shared/framework/swagger/api.key.security';
 
 @ApiCommonResponses()
 @Controller('/notification-groups')
 @UseInterceptors(ClassSerializerInterceptor)
-@UseGuards(UserAuthGuard)
+@UserAuthentication()
 @ApiTags('Workflow groups')
+@ApiExcludeController()
 export class NotificationGroupsController {
   constructor(
     private createNotificationGroupUsecase: CreateNotificationGroup,
@@ -52,7 +52,7 @@ export class NotificationGroupsController {
     description: `workflow group was previously named notification group`,
   })
   createNotificationGroup(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Body() body: CreateNotificationGroupRequestDto
   ): Promise<NotificationGroupResponseDto> {
     return this.createNotificationGroupUsecase.execute(
@@ -72,7 +72,7 @@ export class NotificationGroupsController {
     summary: 'Get workflow groups',
     description: `workflow group was previously named notification group`,
   })
-  getNotificationGroups(@UserSession() user: IJwtPayload): Promise<NotificationGroupResponseDto[]> {
+  listNotificationGroups(@UserSession() user: UserSessionData): Promise<NotificationGroupResponseDto[]> {
     return this.getNotificationGroupsUsecase.execute(
       GetNotificationGroupsCommand.create({
         organizationId: user.organizationId,
@@ -90,7 +90,7 @@ export class NotificationGroupsController {
     description: `workflow group was previously named notification group`,
   })
   getNotificationGroup(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('id') id: string
   ): Promise<NotificationGroupResponseDto> {
     return this.getNotificationGroupUsecase.execute(
@@ -111,7 +111,7 @@ export class NotificationGroupsController {
     description: `workflow group was previously named notification group`,
   })
   updateNotificationGroup(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('id') id: string,
     @Body() body: CreateNotificationGroupRequestDto
   ): Promise<NotificationGroupResponseDto> {
@@ -134,7 +134,7 @@ export class NotificationGroupsController {
     description: `workflow group was previously named notification group`,
   })
   deleteNotificationGroup(
-    @UserSession() user: IJwtPayload,
+    @UserSession() user: UserSessionData,
     @Param('id') id: string
   ): Promise<DeleteNotificationGroupResponseDto> {
     return this.deleteNotificationGroupUsecase.execute(

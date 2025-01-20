@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useLocalThemePreference, ColorSchemePreferenceEnum } from '@novu/shared-web';
 import { useColorScheme as useMantineColorScheme } from '@mantine/hooks';
+import { useLocalThemePreference, ColorSchemePreferenceEnum } from '../hooks/useLocalThemePreference';
 import { ColorScheme } from './ColorScheme';
 import { mapThemeStatusToColorScheme } from './mapThemeStatusToColorScheme';
+import { getColorSchemeHtmlElement } from './getColorSchemeHtmlElement';
 
 /**
- * Handle behavior for changing ColorSchemes or ThemeStatuses
+ * Handle behavior for changing ColorSchemes or ThemeStatuses.
+ *
+ * NOTE: This is not intended for getting the color scheme in application code:
+ * - For styling with Panda, use _dark or _light to create CSS targeted at a specific color scheme.
  */
 export const useColorScheme = () => {
   const { themeStatus, setThemeStatus } = useLocalThemePreference();
@@ -14,9 +18,10 @@ export const useColorScheme = () => {
 
   const setColorScheme = useCallback(
     (newColorScheme: ColorScheme) => {
-      // avoid issues with multiple `html` elements (like in Storybook)
-      const htmlElements = document.querySelectorAll('html');
-      const htmlElem = htmlElements.item(htmlElements.length - 1);
+      const htmlElem = getColorSchemeHtmlElement();
+      if (!htmlElem) {
+        return;
+      }
 
       htmlElem.className = newColorScheme;
       _setColorScheme(newColorScheme);
@@ -45,5 +50,6 @@ export const useColorScheme = () => {
   return {
     colorScheme,
     toggleColorScheme,
+    setColorScheme,
   };
 };

@@ -1,6 +1,6 @@
-import { ChangeEventHandler, useState } from 'react';
+import { ChangeEventHandler, useMemo, useState } from 'react';
 import { ActionIcon, useMantineTheme, Group } from '@mantine/core';
-import { Link, useNavigate } from 'react-router-dom';
+import { createSearchParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from '@emotion/styled';
 import { format } from 'date-fns';
 import {
@@ -19,15 +19,19 @@ import {
   Tooltip,
   SearchInput,
 } from '@novu/design-system';
+import { FeatureFlagsKeysEnum, WorkflowCreationSourceEnum } from '@novu/shared';
 
+import { css } from '@novu/novui/css';
+import { Button } from '@novu/novui';
 import {
   useTemplates,
-  useEnvController,
+  useEnvironment,
   useNotificationGroup,
   INotificationTemplateExtended,
   useDebouncedSearch,
+  useFeatureFlag,
 } from '../../hooks';
-import { ROUTES } from '../../constants/routes.enum';
+import { ROUTES } from '../../constants/routes';
 import { parseUrl } from '../../utils/routeUtils';
 import { TemplatesListNoData } from './TemplatesListNoData';
 import { useSegment } from '../../components/providers/SegmentProvider';
@@ -37,10 +41,10 @@ import { useFetchBlueprints, useCreateTemplateFromBlueprint } from '../../api/ho
 import { CreateWorkflowDropdown } from './components/CreateWorkflowDropdown';
 import { IBlueprintTemplate } from '../../api/types';
 import { errorMessage } from '../../utils/notifications';
-import { TemplateCreationSourceEnum } from './shared';
 import { When } from '../../components/utils/When';
 import { ListPage } from '../../components/layout/components/ListPage';
 import { WorkflowListNoMatches } from './WorkflowListNoMatches';
+import { GetStartedPageV2 } from '../../studio/components/GetStartedPageV2/index';
 
 const columns: IExtendedColumn<INotificationTemplateExtended>[] = [
   {
@@ -51,8 +55,8 @@ const columns: IExtendedColumn<INotificationTemplateExtended>[] = [
     Cell: withCellLoading(({ row: { original } }) => (
       <Group spacing={8}>
         <Group spacing={4}>
-          <When truthy={original.chimera}>
-            <Tooltip label="Workflow is handled by Echo" position="top">
+          <When truthy={original.bridge}>
+            <Tooltip label="Workflow is handled by Novu Framework" position="top">
               <div>
                 <Bolt color="#4c6dd4" width="24px" height="24px" />
               </div>
@@ -71,9 +75,10 @@ const columns: IExtendedColumn<INotificationTemplateExtended>[] = [
             position="top"
           >
             <div>
+              {/* eslint-disable-next-line no-nested-ternary */}
               {original.workflowIntegrationStatus?.hasActiveIntegrations &&
               original.workflowIntegrationStatus?.hasPrimaryIntegrations !== false ? (
-                !original.chimera ? (
+                !original.bridge ? (
                   <Bolt color={colors.B40} width="24px" height="24px" />
                 ) : null
               ) : (
@@ -101,7 +106,7 @@ const columns: IExtendedColumn<INotificationTemplateExtended>[] = [
     width: 240,
     maxWidth: 240,
     Cell: withCellLoading(({ row: { original } }) =>
-      original.chimera ? null : <StyledTag data-test-id="category-label"> {original.notificationGroup?.name}</StyledTag>
+      original.bridge ? null : <StyledTag data-test-id="category-label"> {original.notificationGroup?.name}</StyledTag>
     ),
   },
   {
@@ -163,7 +168,7 @@ const columns: IExtendedColumn<INotificationTemplateExtended>[] = [
 
 function WorkflowListPage() {
   const segment = useSegment();
-  const { readonly } = useEnvController();
+  const { readonly } = useEnvironment();
   const { loading: areNotificationGroupLoading } = useNotificationGroup();
   const {
     templates,
@@ -190,14 +195,23 @@ function WorkflowListPage() {
       errorMessage('Something went wrong while creating template from blueprint, please try again later.');
     },
   });
+  const { search } = useLocation();
   const hasGroups = general && general.length > 0;
   const hasTemplates = templates && templates.length > 0;
   const isLoading = areNotificationGroupLoading || areWorkflowsLoading;
   const shouldShowEmptyState = !isLoading && !isFetching && !hasTemplates && searchValue === '';
   const shouldShowNoResults = !isLoading && !isFetching && !hasTemplates && searchValue !== '';
   const isSearchInputDisabled = isLoading || (!hasTemplates && searchValue === '');
+  const isV2Enabled = useFeatureFlag(FeatureFlagsKeysEnum.IS_V2_ENABLED);
 
   const { TemplatesStoreModal, openModal } = useTemplatesStoreModal({ general, popular });
+
+  const isOnboarding = useMemo(() => {
+    const params = search.replace('?', '').split('&');
+    const found = params.find((param) => param === 'onboarding=true');
+
+    return !!found;
+  }, [search]);
 
   function handleTableChange(pageIndex: number) {
     setCurrentPageNumberQueryParam(pageIndex);
@@ -211,12 +225,17 @@ function WorkflowListPage() {
   const handleOnBlueprintClick = (blueprint: IBlueprintTemplate) => {
     createTemplateFromBlueprint({
       blueprint: { ...blueprint },
-      params: { __source: TemplateCreationSourceEnum.TEMPLATE_STORE },
+      params: { __source: WorkflowCreationSourceEnum.TEMPLATE_STORE },
     });
   };
 
   function onRowClick(row) {
-    navigate(parseUrl(ROUTES.WORKFLOWS_EDIT_TEMPLATEID, { templateId: row.values._id }));
+    navigate({
+      pathname: parseUrl(ROUTES.WORKFLOWS_EDIT_TEMPLATEID, { templateId: row.values._id }),
+      search: createSearchParams({
+        type: row.original.type,
+      }).toString(),
+    });
   }
 
   const debouncedSearchChange = useDebouncedSearch(setSearchQueryParam);
@@ -251,16 +270,21 @@ function WorkflowListPage() {
     >
       <Container fluid sx={{ padding: '0 24px 8px 24px' }}>
         <TableActionsContainer>
-          <CreateWorkflowDropdown
-            readonly={readonly}
-            blueprints={popular?.blueprints}
-            isLoading={areBlueprintsLoading}
-            isCreating={isCreatingTemplateFromBlueprint}
-            allTemplatesDisabled={areBlueprintsLoading || !hasGroups}
-            onBlankWorkflowClick={() => handleRedirectToCreateTemplate(false)}
-            onTemplateClick={handleOnBlueprintClick}
-            onAllTemplatesClick={openModal}
-          />
+          {!isV2Enabled ? (
+            <CreateWorkflowDropdown
+              readonly={readonly}
+              blueprints={popular?.blueprints}
+              isLoading={areBlueprintsLoading}
+              isCreating={isCreatingTemplateFromBlueprint}
+              allTemplatesDisabled={areBlueprintsLoading || !hasGroups}
+              onBlankWorkflowClick={() => handleRedirectToCreateTemplate(false)}
+              onTemplateClick={handleOnBlueprintClick}
+              onAllTemplatesClick={openModal}
+            />
+          ) : (
+            <div></div>
+          )}
+
           <SearchInput
             value={searchValue}
             placeholder="Type name or identifier..."
@@ -282,7 +306,7 @@ function WorkflowListPage() {
             noDataPlaceholder={shouldShowNoResults && <WorkflowListNoMatches />}
           />
         </When>
-        <When truthy={shouldShowEmptyState}>
+        <When truthy={shouldShowEmptyState && !isV2Enabled}>
           <TemplatesListNoData
             readonly={readonly}
             blueprints={popular?.blueprints}
@@ -294,6 +318,28 @@ function WorkflowListPage() {
             onAllTemplatesClick={openModal}
           />
         </When>
+
+        <When truthy={shouldShowEmptyState && isV2Enabled}>
+          <div
+            className={css({
+              color: colors.B40,
+              fontSize: '18px',
+              lineHeight: '22px',
+              textAlign: 'center',
+              maxWidth: '600px',
+              margin: '0 auto',
+              marginTop: '80px',
+            })}
+          >
+            To create a workflow in this environment, you need to create a workflow using the @novu/framework and sync
+            it using the {readonly ? 'production' : 'development'} secret key. Follow{' '}
+            <Link className={css({ textDecoration: 'underline' })} to={ROUTES.GET_STARTED}>
+              this guide
+            </Link>{' '}
+            to get started.
+          </div>
+        </When>
+
         <TemplatesStoreModal />
       </TemplateListTableWrapper>
     </ListPage>

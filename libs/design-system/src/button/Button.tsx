@@ -3,13 +3,13 @@ import { Button as MantineButton, ButtonProps, Sx } from '@mantine/core';
 
 import useStyles from './Button.styles';
 
-export type Size = 'md' | 'lg' | undefined;
+export type Size = 'xs' | 'md' | 'lg' | undefined;
 
 export interface IButtonProps extends ButtonProps {
   id?: string;
   loading?: boolean;
   size?: Size;
-  variant?: 'outline' | 'gradient' | 'subtle';
+  variant?: 'outline' | 'gradient' | 'subtle' | 'light';
   disabled?: boolean;
   icon?: React.ReactNode;
   fullWidth?: boolean;
@@ -48,6 +48,7 @@ export const Button = forwardRef<HTMLButtonElement, IButtonProps>(
     buttonRef
   ) => {
     const { classes } = useStyles({ disabled, inherit, variant, pulse });
+    // eslint-disable-next-line no-nested-ternary
     const withIconProps = icon ? (iconPosition === 'left' ? { leftIcon: icon } : { rightIcon: icon }) : {};
 
     return (

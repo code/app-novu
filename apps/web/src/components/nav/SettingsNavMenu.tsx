@@ -1,30 +1,28 @@
 import {
+  IconAdminPanelSettings,
+  IconCreditCard,
+  IconGroup,
   IconManageAccounts,
   IconRoomPreferences,
-  IconAdminPanelSettings,
-  IconGroup,
   IconWorkspacePremium,
-  IconCreditCard,
-  IconKey,
-  IconWebhook,
 } from '@novu/design-system';
-import { BaseEnvironmentEnum, ROUTES, useAuthContext, useEnvController } from '@novu/shared-web';
 import { useNavigate } from 'react-router-dom';
-import { parseUrl } from '../../utils/routeUtils';
+import { FeatureFlagsKeysEnum } from '@novu/shared';
+import { useAuth } from '../../hooks/useAuth';
+import { ROUTES } from '../../constants/routes';
 import { FreeTrialSidebarWidget } from '../layout/components/FreeTrialSidebarWidget';
 import { NavMenu } from './NavMenu';
 import { NavMenuLinkButton } from './NavMenuButton/NavMenuLinkButton';
 import { NavMenuSection } from './NavMenuSection';
+import { useFeatureFlag } from '../../hooks/useFeatureFlag';
+import { When } from '../utils/When';
 
-const getEnvSettingsRoute = (route: ROUTES, env: BaseEnvironmentEnum) => parseUrl(route, { env });
-
-// TODO: Parentheses were not part of designs, but I believe it's much clearer this way
-const getScopedTitle = (label: string, scope?: string) => `${label} ${`(${scope})` ?? ''}`;
+const getScopedTitle = (label: string, scope?: string) => `${label} ${scope ? `(${scope})` : ''}`;
 
 export const SettingsNavMenu: React.FC = () => {
   const navigate = useNavigate();
-  const { currentOrganization } = useAuthContext();
-  const { environment } = useEnvController();
+  const { currentOrganization } = useAuth();
+  const isV2Enabled = useFeatureFlag(FeatureFlagsKeysEnum.IS_V2_ENABLED);
 
   const onBackButtonClick = () => {
     navigate(ROUTES.HOME);
@@ -63,44 +61,25 @@ export const SettingsNavMenu: React.FC = () => {
           link={ROUTES.TEAM_SETTINGS}
           testId="side-nav-settings-team-link"
         ></NavMenuLinkButton>
+        <When truthy={!isV2Enabled}>
+          <NavMenuLinkButton
+            label="Branding"
+            isVisible
+            icon={<IconWorkspacePremium />}
+            link={ROUTES.BRAND_SETTINGS}
+            testId="side-nav-settings-branding-link"
+          ></NavMenuLinkButton>
+        </When>
         <NavMenuLinkButton
-          label="Branding"
-          isVisible
-          icon={<IconWorkspacePremium />}
-          link={ROUTES.BRAND_SETTINGS}
-          testId="side-nav-settings-branding-link"
-        ></NavMenuLinkButton>
-        <NavMenuLinkButton
-          label="Billing plans"
+          label="Plans & Billing"
           isVisible
           icon={<IconCreditCard />}
           link={ROUTES.BILLING}
           testId="side-nav-settings-billing-link"
         ></NavMenuLinkButton>
       </NavMenuSection>
-      <NavMenuSection title={getScopedTitle('Environment', environment?.name)}>
-        <NavMenuLinkButton
-          label="API keys"
-          isVisible
-          icon={<IconKey />}
-          link={getEnvSettingsRoute(
-            ROUTES.API_KEYS,
-            (environment?.name as BaseEnvironmentEnum) ?? BaseEnvironmentEnum.DEVELOPMENT
-          )}
-          testId="side-nav-settings-api-keys"
-        ></NavMenuLinkButton>
-        <NavMenuLinkButton
-          label="Inbound webhook"
-          isVisible
-          icon={<IconWebhook />}
-          link={getEnvSettingsRoute(
-            ROUTES.WEBHOOK,
-            (environment?.name as BaseEnvironmentEnum) ?? BaseEnvironmentEnum.DEVELOPMENT
-          )}
-          testId="side-nav-settings-inbound-webhook"
-        ></NavMenuLinkButton>
-        {/** TODO: we will reinstate the toggle buttons w/ different envs once we have APIs to support the pages */}
-        {/*
+      {/** TODO: we will reinstate the toggle buttons w/ different envs once we have APIs to support the pages */}
+      {/*
           <NavMenuToggleButton
           icon={<IconConstruction />}
           label={'Development'}
@@ -140,8 +119,7 @@ export const SettingsNavMenu: React.FC = () => {
             link={getEnvSettingsRoute(ROUTES.WEBHOOK, BaseEnvironmentEnum.PRODUCTION)}
             testId="side-nav-settings-inbound-webhook-production"
           ></NavMenuLinkButton>
-        </NavMenuToggleButton>*/}
-      </NavMenuSection>
+        </NavMenuToggleButton> */}
       <FreeTrialSidebarWidget />
     </NavMenu>
   );

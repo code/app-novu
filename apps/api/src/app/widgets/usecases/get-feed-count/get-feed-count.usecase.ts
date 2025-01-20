@@ -1,20 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { MessageRepository, SubscriberRepository } from '@novu/dal';
 import { ChannelTypeEnum } from '@novu/shared';
-import { buildMessageCountKey, CachedQuery } from '@novu/application-generic';
+import { buildMessageCountKey, CachedQuery, InstrumentUsecase } from '@novu/application-generic';
 
 import { GetFeedCountCommand } from './get-feed-count.command';
 import { ApiException } from '../../../shared/exceptions/api.exception';
 
 @Injectable()
 export class GetFeedCount {
-  constructor(private messageRepository: MessageRepository, private subscriberRepository: SubscriberRepository) {}
+  constructor(
+    private messageRepository: MessageRepository,
+    private subscriberRepository: SubscriberRepository
+  ) {}
 
+  @InstrumentUsecase()
   @CachedQuery({
     builder: ({ environmentId, subscriberId, ...command }: GetFeedCountCommand) =>
       buildMessageCountKey().cache({
-        environmentId: environmentId,
-        subscriberId: subscriberId,
+        environmentId,
+        subscriberId,
         ...command,
       }),
   })

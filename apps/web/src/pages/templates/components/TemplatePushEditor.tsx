@@ -2,42 +2,36 @@ import { ChannelTypeEnum } from '@novu/shared';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { colors, Text, When } from '@novu/design-system';
-import { useEnvController, useHasActiveIntegrations, useVariablesManager } from '../../../hooks';
+import { Flex, Grid, Stack, useMantineTheme } from '@mantine/core';
+import { useState } from 'react';
+import { useEnvironment, useHasActiveIntegrations, useVariablesManager } from '../../../hooks';
 import { useStepFormPath } from '../hooks/useStepFormPath';
 import { StepSettings } from '../workflow/SideBar/StepSettings';
 import { LackIntegrationAlert } from './LackIntegrationAlert';
 
-import { Flex, Grid, SegmentedControl, Stack, useMantineTheme } from '@mantine/core';
-import { useState } from 'react';
 import { PushPreview } from '../../../components/workflow/preview';
 import { useEditTemplateContent } from '../hooks/useEditTemplateContent';
 import { CustomCodeEditor } from './CustomCodeEditor';
 import { EditVariablesModal } from './EditVariablesModal';
 import { VariableManagementButton } from './VariableManagementButton';
 import { useTemplateEditorForm } from './TemplateEditorFormProvider';
-import { InputVariables } from './InputVariables';
-import { InputVariablesForm } from './InputVariablesForm';
+import { ControlVariablesForm } from './ControlVariablesForm';
 
 const templateFields = ['content', 'title'];
-
-const PREVIEW = 'Preview';
-const INPUTS = 'Inputs';
 
 export function TemplatePushEditor() {
   const [editVariablesModalOpened, setEditVariablesModalOpen] = useState(false);
   const stepFormPath = useStepFormPath();
   const { control } = useFormContext();
   const variablesArray = useVariablesManager(templateFields);
-  const [inputVariables, setInputVariables] = useState();
+  const [controlVariables, setControlVariables] = useState();
 
   const { isPreviewLoading, handleContentChange } = useEditTemplateContent();
   const { hasActiveIntegration } = useHasActiveIntegrations({
     channelType: ChannelTypeEnum.PUSH,
   });
   const { template } = useTemplateEditorForm();
-  const { chimera } = useEnvController({}, template?.chimera);
-  const [activeTab, setActiveTab] = useState<string>(PREVIEW);
-  const theme = useMantineTheme();
+  const { bridge } = useEnvironment({ bridge: template?.bridge });
 
   return (
     <>
@@ -53,12 +47,12 @@ export function TemplatePushEditor() {
               control={control}
               render={({ field }) => (
                 <Stack spacing={8} data-test-id="push-title-container">
-                  <When truthy={!chimera}>
+                  <When truthy={!bridge}>
                     <VariableManagementButton
                       openEditVariablesModal={() => {
                         setEditVariablesModalOpen(true);
                       }}
-                      label={chimera ? 'Input variables' : 'Title'}
+                      label={bridge ? 'Control variables' : 'Title'}
                     />
 
                     <CustomCodeEditor
@@ -69,13 +63,13 @@ export function TemplatePushEditor() {
                       height="128px"
                     />
                   </When>
-                  <When truthy={chimera}>
-                    <InputVariablesForm onChange={setInputVariables} />
+                  <When truthy={bridge}>
+                    <ControlVariablesForm onChange={setControlVariables} />
                   </When>
                 </Stack>
               )}
             />
-            <When truthy={!chimera}>
+            <When truthy={!bridge}>
               <Controller
                 name={`${stepFormPath}.template.content` as any}
                 defaultValue=""
@@ -102,7 +96,7 @@ export function TemplatePushEditor() {
         </Grid.Col>
         <Grid.Col span={'content'}>
           <Flex justify="center">
-            <PushPreview inputVariables={inputVariables} showLoading={isPreviewLoading} showOverlay={false} />
+            <PushPreview controlVariables={controlVariables} showLoading={isPreviewLoading} showOverlay={false} />
           </Flex>
         </Grid.Col>
       </Grid>

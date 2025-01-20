@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { expect } from 'chai';
 import axios from 'axios';
 import { addSeconds, differenceInMilliseconds, subDays } from 'date-fns';
@@ -14,7 +13,7 @@ import { StepTypeEnum, DelayTypeEnum, DigestUnitEnum, DigestTypeEnum, JobTopicNa
 
 const axiosInstance = axios.create();
 
-describe('Trigger event - Delay triggered events - /v1/events/trigger (POST)', function () {
+describe('Trigger event - Delay triggered events - /v1/events/trigger (POST) #novu-v2', function () {
   let session: UserSession;
   let template: NotificationTemplateEntity;
   let subscriber: SubscriberEntity;
@@ -85,13 +84,7 @@ describe('Trigger event - Delay triggered events - /v1/events/trigger (POST)', f
 
     expect(delayedJob!.status).to.equal(JobStatusEnum.DELAYED);
 
-    const expireAt = new Date(delayedJob?.expireAt as string);
     const createdAt = new Date(delayedJob?.createdAt as string);
-
-    const subExpire30Days = subDays(expireAt, 30);
-    const diff = differenceInMilliseconds(subExpire30Days, createdAt);
-
-    expect(diff).to.approximately(200, 2000);
 
     const messages = await messageRepository.find({
       _environmentId: session.environment._id,

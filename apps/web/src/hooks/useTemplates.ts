@@ -1,7 +1,7 @@
-import { INotificationTemplate, WorkflowIntegrationStatus, NotificationTemplateTypeEnum } from '@novu/shared';
+import { INotificationTemplate, isBridgeWorkflow, WorkflowIntegrationStatus, WorkflowTypeEnum } from '@novu/shared';
 import { IUsePaginationQueryParamsStateOptions } from '@novu/design-system';
 
-import { useEnvController } from './useEnvController';
+import { useEnvironment } from './useEnvironment';
 import { getNotificationsList } from '../api/notification-templates';
 import { usePaginatedQuery } from './usePaginatedQuery';
 
@@ -10,7 +10,7 @@ export type INotificationTemplateExtended = INotificationTemplate & {
   status: string;
   notificationGroup: { name: string };
   workflowIntegrationStatus?: WorkflowIntegrationStatus;
-  chimera?: boolean;
+  bridge?: boolean;
 };
 
 /** allow override of paginated inputs */
@@ -22,7 +22,7 @@ export function useTemplates({
   pageIndex?: IUsePaginationQueryParamsStateOptions['initialPageNumber'];
   pageSize?: IUsePaginationQueryParamsStateOptions['initialPageSize'];
 } & Pick<IUsePaginationQueryParamsStateOptions, 'areSearchParamsEnabled'> = {}) {
-  const { environment } = useEnvController();
+  const { environment } = useEnvironment();
 
   const {
     data,
@@ -56,7 +56,7 @@ export function useTemplates({
     templates: data?.data.map((template) => {
       return {
         ...template,
-        chimera: template.type === NotificationTemplateTypeEnum.ECHO,
+        bridge: isBridgeWorkflow(template.type),
       };
     }),
     loading: isLoading,

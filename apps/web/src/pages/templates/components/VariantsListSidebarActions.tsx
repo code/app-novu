@@ -7,7 +7,7 @@ import { ActionButton, Condition, ConditionPlus, Trash, VariantPlus } from '@nov
 
 import { Conditions, IConditions } from '../../../components/conditions';
 import { When } from '../../../components/utils/When';
-import { useEnvController } from '../../../hooks';
+import { useEnvironment } from '../../../hooks';
 import { useBasePath } from '../hooks/useBasePath';
 import { useFilterPartsList } from '../hooks/useFilterPartsList';
 import { useStepIndex } from '../hooks/useStepIndex';
@@ -21,7 +21,7 @@ const variantsCreatePath = '/variants/create';
 export const VariantsListSidebarActions = () => {
   const { control, watch, setValue } = useFormContext<IForm>();
   const { deleteStep } = useTemplateEditorForm();
-  const { readonly: isReadonly } = useEnvController();
+  const { readonly: isReadonly } = useEnvironment();
   const { stepUuid = '', channel = '' } = useParams<{
     stepUuid: string;
     channel: string;
@@ -58,7 +58,7 @@ export const VariantsListSidebarActions = () => {
   const hasNoFilters = (filters && filters?.length === 0) || !filters || isNewVariantCreationUrl;
 
   const onAddVariant = () => {
-    const newPath = basePath + `/${channel}/${stepUuid}/variants/create`;
+    const newPath = `${basePath}/${channel}/${stepUuid}/variants/create`;
     navigate(newPath);
   };
 
@@ -71,7 +71,7 @@ export const VariantsListSidebarActions = () => {
 
       const variant = makeVariantFromStep(rootStep, { conditions: newConditions });
       append(variant);
-      navigate(basePath + `/${variant.template.type}/${stepUuid}/variants/${variant.uuid}`);
+      navigate(`${basePath}/${variant.template.type}/${stepUuid}/variants/${variant.uuid}`);
     } else {
       setValue(`${stepFormPath}.filters`, newConditions, { shouldDirty: true });
     }
@@ -101,6 +101,7 @@ export const VariantsListSidebarActions = () => {
     setIsDeleteModalOpened(false);
   };
 
+  // eslint-disable-next-line no-nested-ternary
   const conditionAction = isReadonly ? 'View' : hasNoFilters ? 'Add' : 'Edit';
 
   return (

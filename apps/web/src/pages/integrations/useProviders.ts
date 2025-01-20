@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import * as cloneDeep from 'lodash.clonedeep';
+import cloneDeep from 'lodash.clonedeep';
 import {
   ChannelTypeEnum,
   IConfigCredentials,
@@ -11,7 +11,7 @@ import {
 
 import { useIntegrations } from '../../hooks';
 import type { IIntegratedProvider, IntegrationEntity } from './types';
-import { IS_DOCKER_HOSTED } from '../../config';
+import { IS_SELF_HOSTED } from '../../config';
 
 /*
  * temporary patch before migration script
@@ -24,6 +24,7 @@ function fcmFallback(integration: IntegrationEntity | undefined, clonedCredentia
 
     clonedCredentials?.forEach((cred) => {
       if (cred.key === 'serviceAccount') {
+        // eslint-disable-next-line no-param-reassign
         cred.value = serviceAccount;
       }
     });
@@ -33,7 +34,7 @@ function fcmFallback(integration: IntegrationEntity | undefined, clonedCredentia
 function initializeProvidersByIntegration(integrations: IntegrationEntity[]): IIntegratedProvider[] {
   return integrations
     .filter((integrationItem) => {
-      if (!IS_DOCKER_HOSTED) {
+      if (!IS_SELF_HOSTED) {
         return true;
       }
 
@@ -51,6 +52,7 @@ function initializeProvidersByIntegration(integrations: IntegrationEntity[]): II
       ) {
         clonedCredentials.forEach((credential) => {
           if (credential.type === 'boolean' || credential.type === 'switch') {
+            // eslint-disable-next-line no-param-reassign
             credential.value = integrationItem.credentials[credential.key];
 
             return;
@@ -84,6 +86,7 @@ function initializeProvidersByIntegration(integrations: IntegrationEntity[]): II
         identifier: integrationItem?.identifier,
         primary: integrationItem?.primary ?? false,
         conditions: integrationItem?.conditions ?? [],
+        removeNovuBranding: integrationItem?.removeNovuBranding ?? false,
       };
     });
 }

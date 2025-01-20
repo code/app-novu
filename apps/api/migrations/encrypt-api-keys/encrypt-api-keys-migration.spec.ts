@@ -1,6 +1,6 @@
 import { expect } from 'chai';
-import { faker } from '@faker-js/faker';
 import { createHash } from 'crypto';
+import { faker } from '@faker-js/faker';
 
 import { UserSession } from '@novu/testing';
 import { ChannelTypeEnum } from '@novu/stateless';
@@ -29,7 +29,7 @@ describe('Encrypt Old api keys', function () {
   it('should decrypt all old api keys', async function () {
     await pruneIntegration({ environmentRepository });
 
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 2; i += 1) {
       await environmentRepository.create({
         identifier: 'identifier' + i,
         name: faker.name.jobTitle(),
@@ -82,7 +82,7 @@ describe('Encrypt Old api keys', function () {
       active: false,
     };
 
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 2; i += 1) {
       await environmentRepository.create({
         identifier: 'identifier' + i,
         name: faker.name.jobTitle(),

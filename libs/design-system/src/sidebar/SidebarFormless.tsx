@@ -1,6 +1,6 @@
 import { cx } from '@emotion/css';
 import { Drawer, Loader, Stack } from '@mantine/core';
-import { useKeyDown } from '@novu/shared-web';
+import { useKeyDown } from '../hooks/useKeyDown';
 import { ActionButton } from '../button/ActionButton';
 import { colors } from '../config';
 import { ArrowLeft } from '../icons';
@@ -10,7 +10,7 @@ import {
   BodyHolder,
   FooterHolder,
   HeaderHolder,
-  scrollable,
+  scrollableClass,
   sidebarDrawerContentClassName,
   useDrawerStyles,
 } from './Sidebar.styles';
@@ -38,8 +38,9 @@ export const SidebarFormless = ({
   'data-test-id': dataTestId,
   onClose,
   onBack,
+  navigationWidth,
 }: ISidebarBaseProps) => {
-  const { classes: drawerClasses } = useDrawerStyles({ isExpanded });
+  const { classes: drawerClasses } = useDrawerStyles({ isExpanded, navigationWidth });
   const onCloseCallback = () => {
     onClose();
   };
@@ -62,7 +63,7 @@ export const SidebarFormless = ({
     >
       <div
         data-test-id={dataTestId}
-        className={cx(sidebarDrawerContentClassName, { [scrollable]: isParentScrollable })}
+        className={cx(sidebarDrawerContentClassName, { [scrollableClass]: isParentScrollable })}
       >
         <HeaderHolder className="sidebar-header-holder">
           {isExpanded && onBack && (
